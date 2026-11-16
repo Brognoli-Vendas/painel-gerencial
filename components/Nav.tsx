@@ -31,14 +31,14 @@ export function SubAbas({ telas }: { telas: Tela[] }) {
   const subs = telas.filter((t) => t.grupo === (atual?.grupo ?? "Geral"));
   if (subs.length < 2) return null;
   return (
-    <nav className="stabs" aria-label={`Telas de ${atual?.grupo}`}>
-      <div className="wrap">
+    <div className="subbar">
+      <nav className="stabs wrap" aria-label={`Telas de ${atual?.grupo}`}>
         {subs.map((t) => (
           <Link key={t.id} href={t.href} aria-current={t.id === atual?.id ? "page" : undefined}>
             {t.rotulo}
           </Link>
         ))}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { exigirSessao } from "@/lib/sessao";
 import { GRUPOS_MENU, TELAS } from "@/lib/permissions";
 import { MenuPrincipal, SubAbas } from "@/components/Nav";
+import { Logo } from "@/components/Logo";
 
 const NIVEL = { diretoria: "Diretoria", gerente: "Gerente", assistente: "Assistente comercial" } as const;
 
@@ -13,11 +14,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       <header className="top">
         <div className="wrap">
-          <span className="marca">Brognoli</span>
+          <Logo />
           <MenuPrincipal telas={telas} grupos={grupos} />
           <div className="user">
             <span>
-              <b>{perfil.nome}</b> · {NIVEL[perfil.nivel]}
+              <b>{perfil.nome}</b> {NIVEL[perfil.nivel]}
             </span>
             <form action="/auth/signout" method="post">
               <button type="submit">Sair</button>
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <SubAbas telas={telas} />
-      <main className="wrap">{children}</main>
+      <main className="page wrap">{children}</main>
     </>
   );
 }

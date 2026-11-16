@@ -2,12 +2,13 @@
 
 import { useActionState } from "react";
 import { entrar } from "./actions";
+import { Logo } from "@/components/Logo";
 
 export function FormLogin({ erroInicial }: { erroInicial?: string }) {
   const [estado, acao, pendente] = useActionState(entrar, erroInicial ? { erro: erroInicial } : undefined);
   return (
     <form action={acao}>
-      <div className="marca">Brognoli</div>
+      <Logo />
       <h1>Entrar no painel</h1>
       {estado?.erro && <div className="aviso erro" role="alert">{estado.erro}</div>}
       <label>
