@@ -1,0 +1,52 @@
+import "server-only";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { permissoesEfetivas, TELAS, type Perfil, type Permissoes } from "@/lib/permissions";
+
+export type Sessao = { perfil: Perfil; permissoes: Permissoes };
+
+/** Carrega o usuário logado, o perfil e as permissões efetivas. Redireciona se algo faltar. */
+export async function exigirSessao(): Promise<Sessao> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) redirect("/login");
+
+  const { data: p } = await supabase
+    .from("perfis")
+    .select("id, nome, email, nivel, vertical, equipes, admin, ativo")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  if (!p || !p.ativo) {
+    await supabase.auth.signOut();
+    redirect("/login?erro=inativo");
+  }
+
+  const { data: ajustes } = await supabase
+    .from("permissoes_usuario")
+    .select("chave, permitido")
+    .eq("usuario_id", auth.user.id);
+
+  const perfil: Perfil = {
+    id: p.id,
+    nome: p.nome,
+    email: p.email,
+    nivel: p.nivel,
+    vertical: p.vertical,
+    equipes: p.equipes ?? [],
+    admin: p.admin,
+  };
+  return { perfil, permissoes: permissoesEfetivas(perfil, ajustes ?? []) };
+}
+
+/** Guarda de rota no servidor: bloqueia a tela e registra a visualização. */
+export async function exigirTela(telaId: string): Promise<Sessao> {
+  const sessao = await exigirSessao();
+  if (!sessao.permissoes[telaId]) redirect("/?erro=sem-permissao");
+  const tela = TELAS.find((t) => t.id === telaId);
+  const supabase = await createClient();
+  await supabase
+    .from("registros_acesso")
+    .insert({ usuario_id: sessao.perfil.id, evento: "visualizacao_tela", tela: tela?.rotulo ?? telaId });
+  return sessao;
+}
