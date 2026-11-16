@@ -39,6 +39,25 @@ function vertical(v: string): "Terceiros" | "Lançamentos" | null {
   return null; // ex.: SEM_VERTICAL, fica fora do painel
 }
 
+/** Equipes oficiais e o nome que aparece no painel (definido pela Brognoli em 16/11/2026). */
+const EQUIPES: Record<string, { nome: string; vert: "Terceiros" | "Lançamentos" }> = {
+  CET1: { nome: "Centro 1", vert: "Terceiros" },
+  CET2: { nome: "Centro 2", vert: "Terceiros" },
+  COT1: { nome: "Kobrasol", vert: "Terceiros" },
+  INT2: { nome: "Ingleses", vert: "Terceiros" },
+  COT3: { nome: "Estreito", vert: "Terceiros" },
+  CMT3: { nome: "Campeche", vert: "Terceiros" },
+  TRT1: { nome: "Trindade", vert: "Terceiros" },
+  INL1: { nome: "Ingleses", vert: "Lançamentos" },
+  CML2: { nome: "Campeche 2", vert: "Lançamentos" },
+  CML1: { nome: "Campeche 1", vert: "Lançamentos" },
+  CEL1: { nome: "Centro", vert: "Lançamentos" },
+  ESL1: { nome: "Estreito", vert: "Lançamentos" },
+  KOL1: { nome: "Kobrasol", vert: "Lançamentos" },
+  TRL: { nome: "Trindade", vert: "Lançamentos" },
+  BLB1: { nome: "Borda", vert: "Lançamentos" },
+};
+
 function nomeCurto(nome: string): string {
   return nome.replace(/\s*\[.*\]\s*$/, "").replace(" - Corretores ", " - ").trim();
 }
@@ -70,7 +89,7 @@ async function buscar(): Promise<Bruto> {
   }
 
   // Só entram equipes que existem hoje: meta cadastrada no mês atual ou no anterior,
-  // ou venda nos últimos 30 dias. Equipes encerradas (ex.: CMT1, CRT1, COT2) ficam de fora.
+  // ou venda nos últimos 30 dias, fora as oficiais. Equipes encerradas (ex.: CMT1, CRT1, COT2) ficam de fora.
   const hoje = hojeSP();
   const mesAtual = hoje.slice(0, 7);
   const dAnt = new Date(Date.UTC(Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)) - 2, 1));
@@ -83,6 +102,8 @@ async function buscar(): Promise<Bruto> {
   }
   for (const l of vendas.linhas) if (l[0] >= corte) vivas.add(l[8]);
   for (const id of [...teams.keys()]) if (!vivas.has(id)) teams.delete(id);
+  // As equipes oficiais sempre entram, com o nome definido acima (mesmo sem meta ou venda recente).
+  for (const [id, t] of Object.entries(EQUIPES)) teams.set(id, t);
 
   return { teams, vendas: vendas.linhas, metas: metas.linhas, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null };
 }
