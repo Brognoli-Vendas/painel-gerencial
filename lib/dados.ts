@@ -68,6 +68,22 @@ async function buscar(): Promise<Bruto> {
     const v = vertical(l[9]);
     if (l[8] && v && !teams.has(l[8])) teams.set(l[8], { nome: nomeCurto(l[10] || l[8]), vert: v });
   }
+
+  // Só entram equipes que existem hoje: meta cadastrada no mês atual ou no anterior,
+  // ou venda nos últimos 30 dias. Equipes encerradas (ex.: CMT1, CRT1, COT2) ficam de fora.
+  const hoje = hojeSP();
+  const mesAtual = hoje.slice(0, 7);
+  const dAnt = new Date(Date.UTC(Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)) - 2, 1));
+  const mesAnterior = dAnt.toISOString().slice(0, 7);
+  const corte = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const vivas = new Set<string>();
+  for (const l of metas.linhas) {
+    const k = `${l[0]}-${l[1].padStart(2, "0")}`;
+    if (k === mesAtual || k === mesAnterior) vivas.add(l[2]);
+  }
+  for (const l of vendas.linhas) if (l[0] >= corte) vivas.add(l[8]);
+  for (const id of [...teams.keys()]) if (!vivas.has(id)) teams.delete(id);
+
   return { teams, vendas: vendas.linhas, metas: metas.linhas, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null };
 }
 
