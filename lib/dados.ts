@@ -39,6 +39,8 @@ export type Dados = {
   aguard: [string, string, number, number, number, string][];
   /** Propostas geradas: [corretor, funil, "AAAA-MM-DD,n;..."]. Nulo se a Nekt não entrega o histórico. */
   prop: [number, number, string][] | null;
+  /** 1º atendimento em minutos úteis: [corretor, funil, "AAAA-MM-DD,atendidos,somaMinutos,atéMeta;..."]. Nulo se a Nekt não entrega o histórico. */
+  pri: [number, number, string][] | null;
 };
 
 type Bruto = {
@@ -68,6 +70,8 @@ type Equipe = {
   aguard: string[][];
   /** Propostas geradas (histórico de etapas). Nulo se o token da Nekt não enxerga a tabela. */
   prop: string[][] | null;
+  /** 1º atendimento em minutos úteis (histórico de etapas). */
+  pri: string[][] | null;
 };
 
 function vertical(v: string): "Terceiros" | "Lançamentos" | null {
@@ -135,6 +139,18 @@ async function buscarEquipe(): Promise<Equipe> {
       `b AS (SELECT CAST(d.assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("h.t")} dd, count(*) c FROM h JOIN nekt_service.fact_deals d ON CAST(d.deal_id AS varchar) = h.owner_id ` +
       `WHERE d.tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
       `SELECT u, k, array_join(array_agg(concat(CAST(dd AS varchar), ',', CAST(c AS varchar))), ';') FROM b GROUP BY 1,2`,
+  ).catch(() => null);
+  // 1º atendimento = do card entrar em "Iniciar Atendimento" até sair dele para uma etapa de atendimento (não conta o robô que manda para "Sem atuação").
+  // Minutos úteis: seg a sex 08h às 18h, sábado 08h às 13h (horário de Brasília), sem feriados. Fontes frias (prazo de 1 dia) ficam de fora.
+  const priP = nektSql(
+    `WITH h AS (SELECT owner_id, stage_id, created_time ct, CAST(created_time AS timestamp) - interval '3' hour t, lead(stage_id) OVER (PARTITION BY owner_id ORDER BY created_time, id) ns, ` +
+      `CAST(lead(created_time) OVER (PARTITION BY owner_id ORDER BY created_time, id) AS timestamp) - interval '3' hour nt FROM nekt_trusted.bitrix_deal_stage_history WHERE CAST(category_id AS varchar) IN ('4','7','3')), ` +
+      `c AS (SELECT owner_id, ct, t, nt FROM h WHERE stage_id IN ('C4:NEW','C7:NEW','C3:NEW') AND ns IS NOT NULL AND ns NOT IN ('C4:NEW','C7:NEW','C3:NEW','C4:PREPARATION','C7:PREPARATION','C3:5') AND ct >= timestamp '2025-10-01 00:00:00 UTC'), ` +
+      `m AS (SELECT c.owner_id, c.ct, sum(greatest(0, date_diff('second', greatest(c.t, CAST(u.d AS timestamp) + interval '8' hour), least(c.nt, CAST(u.d AS timestamp) + CASE WHEN day_of_week(u.d) = 6 THEN interval '13' hour ELSE interval '18' hour END)))) / 60.0 mins ` +
+      `FROM c CROSS JOIN UNNEST(sequence(date(c.t), date(c.nt), interval '1' day)) AS u(d) WHERE day_of_week(u.d) < 7 GROUP BY 1,2), ` +
+      `b AS (SELECT CAST(d.assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("m.ct")} dd, count(*) n, sum(m.mins) s, count_if(m.mins <= 20) ok FROM m JOIN nekt_service.fact_deals d ON CAST(d.deal_id AS varchar) = m.owner_id ` +
+      `WHERE d.tipo_lead IN ${TIPOS} AND NOT (d.source_id IN ('63','UC_J4FSTS','UC_AIFPIT') OR (d.tipo_lead = 'Proprietário' AND d.source_id = '1')) GROUP BY 1,2,3) ` +
+      `SELECT u, k, array_join(array_agg(concat(CAST(dd AS varchar), ',', CAST(n AS varchar), ',', CAST(round(s) AS varchar), ',', CAST(ok AS varchar))), ';') FROM b GROUP BY 1,2`,
   ).catch(() => null);
   const [neg, fch, est, crit, pauta, venda, pat, l1, l2, avend, aguard] = await Promise.all([
     nektSql(
@@ -206,11 +222,12 @@ async function buscarEquipe(): Promise<Equipe> {
     ),
   ]);
   const prop = await propP;
+  const pri = await priP;
   for (const r of [neg, fch, est, crit, pauta, venda, pat, l1, l2, avend, aguard]) if (r.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
-  if (prop?.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
+  if (prop?.truncado || pri?.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
   return {
     neg: neg.linhas, fch: fch.linhas, est: est.linhas, crit: crit.linhas, pauta: pauta.linhas, venda: venda.linhas, pat: pat.linhas,
-    libs: [...l1.linhas, ...l2.linhas], avend: avend.linhas, aguard: aguard.linhas, prop: prop ? prop.linhas : null,
+    libs: [...l1.linhas, ...l2.linhas], avend: avend.linhas, aguard: aguard.linhas, prop: prop ? prop.linhas : null, pri: pri ? pri.linhas : null,
   };
 }
 
@@ -354,7 +371,7 @@ const num = (s: string) => {
 
 /** Monta os dados que este usuário pode ver (nada além do escopo dele sai do servidor). */
 export async function carregarDados(perfil: Perfil): Promise<Dados> {
-  const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null };
+  const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null };
   let b: Bruto;
   try {
     b = await bruto();
@@ -422,7 +439,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
     }
     metas.push(...soma.values());
   }
-  const out: Dados = { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas, neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null };
+  const out: Dados = { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas, neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null };
   if (mostraNumeros && b.eq) montarEquipe(out, b.eq, porUsuario, idsVisiveis);
   return out;
 }
@@ -446,6 +463,7 @@ function montarEquipe(out: Dados, e: Equipe, porUsuario: Map<string, number>, eq
     if (c >= 0) out.aguard.push([l[0], l[1], c, num(l[3]), num(l[4]), l[5]]);
   }
   out.prop = e.prop ? empacotar(e.prop) : null;
+  out.pri = e.pri ? empacotar(e.pri) : null;
   for (const l of e.crit) {
     const c = ix(l[2]);
     if (c >= 0) out.crit.push([num(l[0]), l[1], c, num(l[3]), num(l[4])]);
