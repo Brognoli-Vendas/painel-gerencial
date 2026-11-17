@@ -31,6 +31,20 @@ const EXTRAS: [string, string][] = [
   ['ue("VGV total",P(d)', 'ue("VGV total",window.__p2(d)'],
   ['ue("VGC Brognoli",P(r)', 'ue("VGC Brognoli",window.__p2(r)'],
   ['ue("VGV total",P(vg)', 'ue("VGV total",window.__p2(vg)'],
+  // Minha Equipe com dados reais: sem 1º atendimento nem metas da semana (ainda sem fonte), ciclo e período anterior reais.
+  ["Math.round(d/v)+' min</div><div class=\"d\"><span class=\"flat\">Meta 20 min</span>", "\"—\"+'</div><div class=\"d\"><span class=\"flat\">Em breve</span>"],
+  ["Math.round(t.cyc+p()*3)+' dias</div>", "window.__ciclo(e,a)+'</div>"],
+  ["T(s,Math.round(s*.93))", "T(s,window.__prevAt(e,a))"],
+  ["(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" acima de 40 min, \"+r+\" parados há 15 dias</span>", "r+'</div><div class=\"d\"><span class=\"flat\">'+\"parados há 15 dias ou mais</span>"],
+  ["n.m.pri+' min</td>", "\"—\"+'</td>"],
+  ["n.m.meta+\"%</td></tr>\"", "\"—</td></tr>\""],
+  ["G(a.t,a.ctx+\" | \"+_(),!0)+U(i.route)+na(a.vert)+ra(e,t)", "G(a.t,a.ctx+\" | \"+_(),!1)+U(i.route)+ra(e,t)"],
+  ["s=Ne(e,a,i.per),n=i.chk", "s=window.__Ne0(e,a,i.per),n=i.chk"],
+  // Telas da Minha Equipe liberadas (dados reais). A Reativação continua fora até ter tabela própria.
+  ['["equipe-comprador","equipe-proprietarios","equipe-pauta","equipe-liberadas","equipe-lancamentos"].forEach(function(e){D[e].out=!0})', '["equipe-reativacao"].forEach(function(e){D[e].out=!0})'],
+  // Desempenho: sem os cartões de agenciamentos vendidos e propostas geradas (ainda sem fonte).
+  ["</div></div><div><div class=\"k\">Agenciamentos vendidos</div><div class=\"v num\">'+k(d.av)+'</div><div class=\"d\">'+T(d.av,l.av)+\"</div></div>\":\"\")+'<div><div class=\"k\">Propostas geradas</div><div class=\"v num\">'+k(d.prop)+'</div><div class=\"d\">'+T(d.prop,l.prop)+'</div></div><div><div class=\"k\">Vendas</div>", "</div></div>':\"\")+'<div><div class=\"k\">Vendas</div>"],
+  ["Regra dos 20 e 40 minutos e de 15 dias sem atualização. ", "Negócios abertos há 15 dias ou mais sem atualização. "],
 ];
 
 export function aplicarExtras(html: string): string {
