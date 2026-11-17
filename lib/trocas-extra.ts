@@ -48,7 +48,7 @@ const EXTRAS: [string, string][] = [
   ["'<div><div class=\"k\">Propostas geradas</div><div class=\"v num\">'+k(d.prop)+'</div><div class=\"d\">'+T(d.prop,l.prop)+'</div></div><div><div class=\"k\">Vendas</div>", "(window.__hasProp?'<div><div class=\"k\">Propostas geradas</div><div class=\"v num\">'+k(d.prop)+'</div><div class=\"d\">'+T(d.prop,l.prop)+'</div></div>':\"\")+'<div><div class=\"k\">Vendas</div>"],
   ['+" | vendas e faturamento reais; leads, propostas e agenciamentos chegam na próxima etapa"', '+" | vendas, faturamento, leads e agenciamentos reais"'],
   // Ordenação do Desempenho: colunas que não se aplicam à vertical do corretor ("–") ficam sempre no fim, nos dois sentidos.
-  ['q=r==="nome"?b.c.nome:b.m[r];return(m>q?1:m<q?-1:0)*i.sort.d});var v=n.filter', 'q=r==="nome"?b.c.nome:b.m[r],sg=window.__sa(g.c,r),sb=window.__sa(b.c,r);return sg!==sb?(sg?-1:1):(m>q?1:m<q?-1:0)*i.sort.d});var v=n.filter'],
+  ['q=r==="nome"?b.c.nome:b.m[r];return(m>q?1:m<q?-1:0)*i.sort.d});var v=n.filter', 'q=r==="nome"?b.c.nome:b.m[r],w=function(c){return r==="ar"||r==="av"||r==="lc"||r==="lp"?c.vert==="Terceiros":r==="ll"?c.vert==="Lançamentos":!0},sg=w(g.c),sb=w(b.c);return sg!==sb?(sg?-1:1):(m>q?1:m<q?-1:0)*i.sort.d});var v=n.filter'],
   ["Regra dos 20 e 40 minutos e de 15 dias sem atualização. ", "Negócios abertos há 15 dias ou mais sem atualização. "],
 ];
 
