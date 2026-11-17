@@ -41,6 +41,10 @@ export type Dados = {
   prop: [number, number, string][] | null;
   /** 1º atendimento em minutos úteis: [corretor, funil, "AAAA-MM-DD,atendidos,somaMinutos,atéMeta;..."]. Nulo se a Nekt não entrega o histórico. */
   pri: [number, number, string][] | null;
+  /** Registro próprio de atendimento (Bitrix a cada 5 min): [corretor, funil, "AAAA-MM-DD,atendidosQuentes,somaMin,atendidosFrios,somaMinFrios,noPrazo,estouros;..."]. */
+  at: [number, number, string][] | null;
+  /** Primeiro dia coberto pelo registro próprio; antes dele vale o cálculo aproximado da Nekt. */
+  atDesde: string | null;
 };
 
 type Bruto = {
@@ -72,6 +76,9 @@ type Equipe = {
   prop: string[][] | null;
   /** 1º atendimento em minutos úteis (histórico de etapas). */
   pri: string[][] | null;
+  /** Registro próprio de atendimento (Supabase). */
+  at: string[][] | null;
+  atDesde: string | null;
 };
 
 function vertical(v: string): "Terceiros" | "Lançamentos" | null {
@@ -223,11 +230,13 @@ async function buscarEquipe(): Promise<Equipe> {
   ]);
   const prop = await propP;
   const pri = await priP;
+  const atR = await rpc<{ u: string; k: number; dados: string; desde: string }[]>("atend_resumo", {}, true);
   for (const r of [neg, fch, est, crit, pauta, venda, pat, l1, l2, avend, aguard]) if (r.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
   if (prop?.truncado || pri?.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
   return {
     neg: neg.linhas, fch: fch.linhas, est: est.linhas, crit: crit.linhas, pauta: pauta.linhas, venda: venda.linhas, pat: pat.linhas,
     libs: [...l1.linhas, ...l2.linhas], avend: avend.linhas, aguard: aguard.linhas, prop: prop ? prop.linhas : null, pri: pri ? pri.linhas : null,
+    at: atR ? atR.map((r) => [r.u, String(r.k), r.dados]) : null, atDesde: atR?.[0]?.desde ?? null,
   };
 }
 
@@ -291,7 +300,7 @@ let proximaTentativa = 0;
 let ultimaGravacao = 0;
 
 /** Chamada às funções do banco que guardam a cópia dos dados (segredo só no servidor). */
-async function rpc<T>(fn: string, corpo: Record<string, unknown>): Promise<T | null> {
+async function rpc<T>(fn: string, corpo: Record<string, unknown>, semChave = false): Promise<T | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const chave = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const segredo = process.env.SNAPSHOT_SEGREDO;
@@ -300,7 +309,7 @@ async function rpc<T>(fn: string, corpo: Record<string, unknown>): Promise<T | n
     const r = await fetch(`${url}/rest/v1/rpc/${fn}`, {
       method: "POST",
       headers: { "content-type": "application/json", apikey: chave, authorization: `Bearer ${chave}` },
-      body: JSON.stringify({ p_segredo: segredo, p_chave: CHAVE, ...corpo }),
+      body: JSON.stringify({ p_segredo: segredo, ...(semChave ? {} : { p_chave: CHAVE }), ...corpo }),
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
     });
@@ -371,7 +380,7 @@ const num = (s: string) => {
 
 /** Monta os dados que este usuário pode ver (nada além do escopo dele sai do servidor). */
 export async function carregarDados(perfil: Perfil): Promise<Dados> {
-  const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null };
+  const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null, at: null, atDesde: null };
   let b: Bruto;
   try {
     b = await bruto();
@@ -439,7 +448,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
     }
     metas.push(...soma.values());
   }
-  const out: Dados = { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas, neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null };
+  const out: Dados = { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas, neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null, at: null, atDesde: null };
   if (mostraNumeros && b.eq) montarEquipe(out, b.eq, porUsuario, idsVisiveis);
   return out;
 }
@@ -464,6 +473,8 @@ function montarEquipe(out: Dados, e: Equipe, porUsuario: Map<string, number>, eq
   }
   out.prop = e.prop ? empacotar(e.prop) : null;
   out.pri = e.pri ? empacotar(e.pri) : null;
+  out.at = e.at ? empacotar(e.at) : null;
+  out.atDesde = e.atDesde ?? null;
   for (const l of e.crit) {
     const c = ix(l[2]);
     if (c >= 0) out.crit.push([num(l[0]), l[1], c, num(l[3]), num(l[4])]);
