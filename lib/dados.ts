@@ -25,6 +25,8 @@ type Bruto = {
   teams: Map<string, { nome: string; vert: "Terceiros" | "Lançamentos" }>;
   vendas: string[][];
   metas: string[][];
+  /** Metas do BI atual (fact_metas_painel): todas as equipes ativas, com meta e supermeta em VGC. */
+  metasPainel: string[][];
   dim: string[][];
   atualizado: string | null;
 };
@@ -58,14 +60,24 @@ const EQUIPES: Record<string, { nome: string; vert: "Terceiros" | "Lançamentos"
   BLB1: { nome: "Borda", vert: "Lançamentos" },
 };
 
+/**
+ * Regra do BI atual: a vertical da venda vem da natureza do imóvel, não da equipe que vendeu.
+ * Imóvel de Terceiros → Terceiros; Imóvel de Lançamentos → Lançamentos; SPE e Terreno ficam fora destas telas.
+ */
+function verticalDaNatureza(n: string): "Terceiros" | "Lançamentos" | null {
+  if (/terceiros/i.test(n)) return "Terceiros";
+  if (/lan[çc]amentos/i.test(n)) return "Lançamentos";
+  return null;
+}
+
 function nomeCurto(nome: string): string {
   return nome.replace(/\s*\[.*\]\s*$/, "").replace(" - Corretores ", " - ").trim();
 }
 
 async function buscar(): Promise<Bruto> {
-  const [vendas, metas, dim, ult] = await Promise.all([
+  const [vendas, metas, dim, ult, mp] = await Promise.all([
     nektSql(
-      "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final " +
+      "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel " +
         "FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-10-01' ORDER BY created_date",
     ),
     nektSql(
@@ -75,8 +87,11 @@ async function buscar(): Promise<Bruto> {
       "SELECT corretor_nome, equipe_nome FROM nekt_service.dim_corretores_equipe WHERE CAST(active AS varchar) = 'true'",
     ),
     nektSql("SELECT CAST(max(modificado) AS varchar) FROM nekt_service.fact_fechamentos_final"),
+    nektSql(
+      "SELECT created_year, created_month, equipe_codigo, meta, supermeta FROM nekt_service.fact_metas_painel WHERE CAST(created_year AS integer) >= 2025 AND CAST(considerar_no_painel AS varchar) = 'true'",
+    ),
   ]);
-  if (vendas.truncado || metas.truncado || dim.truncado) throw new Error("Nekt devolveu resultado parcial.");
+  if (vendas.truncado || metas.truncado || dim.truncado || mp.truncado) throw new Error("Nekt devolveu resultado parcial.");
 
   const teams = new Map<string, { nome: string; vert: "Terceiros" | "Lançamentos" }>();
   for (const l of metas.linhas) {
@@ -105,7 +120,7 @@ async function buscar(): Promise<Bruto> {
   // As equipes oficiais sempre entram, com o nome definido acima (mesmo sem meta ou venda recente).
   for (const [id, t] of Object.entries(EQUIPES)) teams.set(id, t);
 
-  return { teams, vendas: vendas.linhas, metas: metas.linhas, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null };
+  return { teams, vendas: vendas.linhas, metas: metas.linhas, metasPainel: mp.linhas, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null };
 }
 
 async function bruto(): Promise<Bruto> {
@@ -157,14 +172,15 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
   // Corretores: pares (nome, equipe) vindos das vendas e do cadastro ativo.
   const cors: Dados["cors"] = [];
   const indice = new Map<string, number>();
-  const garantir = (nome: string, team: string) => {
+  const garantir = (nome: string, team: string, vert?: string) => {
     if (!nome || !idsVisiveis.has(team)) return -1;
-    const k = nome + "|" + team;
+    const v = vert ?? (vertDe.get(team) as string);
+    const k = nome + "|" + team + "|" + v;
     let ix = indice.get(k);
     if (ix === undefined) {
       ix = cors.length;
       indice.set(k, ix);
-      cors.push({ id: "c" + ix, i: ix, nome, team, vert: vertDe.get(team) as string });
+      cors.push({ id: "c" + ix, i: ix, nome, team, vert: v });
     }
     return ix;
   };
@@ -173,17 +189,26 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
   const vendas: Dados["vendas"] = [];
   if (mostraNumeros) {
     for (const l of b.vendas) {
-      const ix = garantir(l[1] || "Sem corretor", l[8]);
+      const vn = verticalDaNatureza(l[11] ?? "");
+      if (!vn || (ehDir && !vertOk(vn))) continue;
+      const ix = garantir(l[1] || "Sem corretor", l[8], vn);
       if (ix < 0) continue;
       vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7])]);
     }
   }
   const metas: Dados["metas"] = [];
   if (mostraNumeros) {
-    for (const l of b.metas) {
+    const soma = new Map<string, [string, string, number, number]>();
+    for (const l of b.metasPainel) {
       if (!idsVisiveis.has(l[2])) continue;
-      metas.push([`${l[0]}-${l[1].padStart(2, "0")}`, l[2], num(l[5]), num(l[6])]);
+      const mes = `${l[0]}-${l[1].padStart(2, "0")}`;
+      const k = mes + "|" + l[2];
+      const x = soma.get(k) ?? [mes, l[2], 0, 0];
+      x[2] += num(l[3]);
+      x[3] += num(l[4]);
+      soma.set(k, x);
     }
+    metas.push(...soma.values());
   }
   return { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas };
 }
