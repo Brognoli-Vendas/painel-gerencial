@@ -26,7 +26,7 @@ type Bruto = {
   vendas: string[][];
   metas: string[][];
   /** Metas do BI atual (fact_metas_painel): todas as equipes ativas, com meta e supermeta em VGC. */
-  metasPainel: string[][];
+  metasPainel: string[][] | null;
   dim: string[][];
   atualizado: string | null;
 };
@@ -89,9 +89,9 @@ async function buscar(): Promise<Bruto> {
     nektSql("SELECT CAST(max(modificado) AS varchar) FROM nekt_service.fact_fechamentos_final"),
     nektSql(
       "SELECT created_year, created_month, equipe_codigo, meta, supermeta FROM nekt_service.fact_metas_painel WHERE CAST(created_year AS integer) >= 2025 AND CAST(considerar_no_painel AS varchar) = 'true'",
-    ),
+    ).catch(() => null), // se o token não enxerga a tabela, cai para fact_metas_equipes
   ]);
-  if (vendas.truncado || metas.truncado || dim.truncado || mp.truncado) throw new Error("Nekt devolveu resultado parcial.");
+  if (vendas.truncado || metas.truncado || dim.truncado || mp?.truncado) throw new Error("Nekt devolveu resultado parcial.");
 
   const teams = new Map<string, { nome: string; vert: "Terceiros" | "Lançamentos" }>();
   for (const l of metas.linhas) {
@@ -120,7 +120,7 @@ async function buscar(): Promise<Bruto> {
   // As equipes oficiais sempre entram, com o nome definido acima (mesmo sem meta ou venda recente).
   for (const [id, t] of Object.entries(EQUIPES)) teams.set(id, t);
 
-  return { teams, vendas: vendas.linhas, metas: metas.linhas, metasPainel: mp.linhas, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null };
+  return { teams, vendas: vendas.linhas, metas: metas.linhas, metasPainel: mp ? mp.linhas : null, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null };
 }
 
 async function bruto(): Promise<Bruto> {
@@ -199,13 +199,16 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
   const metas: Dados["metas"] = [];
   if (mostraNumeros) {
     const soma = new Map<string, [string, string, number, number]>();
-    for (const l of b.metasPainel) {
+    // fact_metas_painel: [ano, mês, equipe, meta, supermeta]; reserva fact_metas_equipes: [ano, mês, equipe, nome, vert, meta, supermeta]
+    const fonte = b.metasPainel ?? b.metas;
+    const [ia, ib] = b.metasPainel ? [3, 4] : [5, 6];
+    for (const l of fonte) {
       if (!idsVisiveis.has(l[2])) continue;
       const mes = `${l[0]}-${l[1].padStart(2, "0")}`;
       const k = mes + "|" + l[2];
       const x = soma.get(k) ?? [mes, l[2], 0, 0];
-      x[2] += num(l[3]);
-      x[3] += num(l[4]);
+      x[2] += num(l[ia]);
+      x[3] += num(l[ib]);
       soma.set(k, x);
     }
     metas.push(...soma.values());
