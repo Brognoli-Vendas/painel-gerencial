@@ -27,10 +27,16 @@ function rec(c,v){return{c:c.id,cn:c.nome,team:c.team,vert:c.vert,fonte:v[2]||"(
 function meses6(){var o=[];for(var k=5;k>=0;k--)o.push(ym(HJ.getUTCFullYear(),HJ.getUTCMonth()-k));return o}
 var q_KI={comprador:0,proprietarios:1,lancamentos:2};
 function q_parse(rows,w){var o={};(rows||[]).forEach(function(r){var a=[];String(r[2]).split(";").forEach(function(t){if(t)a.push(t.split(w))});o[r[0]+"|"+r[1]]=a});return o}
-var q_NEG=q_parse(D.neg,","),q_FCH=q_parse(D.fch,","),q_EST=q_parse(D.est,"|"),q_AV=q_parse(D.avend,","),q_PRP=D.prop?q_parse(D.prop,","):null,q_PRI=D.pri?q_parse(D.pri,","):null;
+var q_NEG=q_parse(D.neg,","),q_FCH=q_parse(D.fch,","),q_EST=q_parse(D.est,"|"),q_AV=q_parse(D.avend,","),q_PRP=D.prop?q_parse(D.prop,","):null,q_PRI=D.pri?q_parse(D.pri,","):null,q_AT=D.at?q_parse(D.at,","):null,q_ATD=D.atDesde||"";
 window.__hasProp=!!D.prop;
 var q_AGU={};(D.aguard||[]).forEach(function(r){var key=r[2]+"|"+r[3];(q_AGU[key]=q_AGU[key]||[]).push(r)});
-function q_pri(ix,k,r){return q_PRI?{n:q_sum(q_PRI,ix,k,r,1),s:q_sum(q_PRI,ix,k,r,2),o:q_sum(q_PRI,ix,k,r,3)}:{n:0,s:0,o:0}}
+/* 1º atendimento: registro próprio (Bitrix a cada 5 min) desde q_ATD; antes disso, cálculo aproximado da Nekt (só fonte quente, sem estouros). */
+function q_pri(ix,k,r){var o={nh:0,sh:0,nc:0,sc:0,ok:0,es:0};
+  if(q_PRI)(q_PRI[ix+"|"+k]||[]).forEach(function(p){if(p[0]>=r[0]&&p[0]<=r[1]&&(!q_ATD||p[0]<q_ATD)){o.nh+=+p[1];o.sh+=+p[2];o.ok+=+p[3]}});
+  if(q_AT)(q_AT[ix+"|"+k]||[]).forEach(function(p){if(p[0]>=r[0]&&p[0]<=r[1]){o.nh+=+p[1];o.sh+=+p[2];o.nc+=+p[3];o.sc+=+p[4];o.ok+=+p[5];o.es+=+p[6]}});
+  return o}
+function q_priM(o){return o.nh?Math.round(o.sh/o.nh):(o.nc?Math.round(o.sc/o.nc):null)}
+function q_priP(o){var t=o.nh+o.nc+o.es;return t?Math.round(o.ok/t*100):null}
 function q_dur(m){return m<120?m+" min":m<2880?Math.round(m/60)+" h":Math.round(m/1440)+" dias"}
 function q_sum(m,ix,k,r,col){var a=m[ix+"|"+k]||[],t=0;a.forEach(function(p){if(p[0]>=r[0]&&p[0]<=r[1])t+=+p[col]});return t}
 var q_PROP=[["Confecção de Proposta","Em Negociação com Vendedor"],["Em decisão","Emitir Autorização de venda","Aguardando assinatura","Elaborar carta de preferência","Período da carta de preferência"],["Proposta / em reserva","Aguardando assinatura"]];
@@ -127,7 +133,7 @@ oe=function(t){var k=tkt(t.id,i.per);return k?window.__meta(t.id,i.per).m/k:0};
 Oe=function(t){var k=tkt(t.id,"mes");return k?window.__meta(t.id,"mes").m/k:0};
 
 window.__Ne0=Ne;
-Ne=function(c,kind,per){var k=q_KI[kind],r=faixa(per),e=q_est(c.i,k);return{at:q_sum(q_NEG,c.i,k,r,1),ea:e.ea,ep:e.ep,pri:(function(){var p=q_pri(c.i,k,r);return p.n?Math.round(p.s/p.n):null})(),a40:(q_AGU[c.i+"|"+k]||[]).length,a20:0,a15:e.p15,meta:null}};
+Ne=function(c,kind,per){var k=q_KI[kind],r=faixa(per),e=q_est(c.i,k);return{at:q_sum(q_NEG,c.i,k,r,1),ea:e.ea,ep:e.ep,pri:q_priM(q_pri(c.i,k,r)),pp:q_priP(q_pri(c.i,k,r)),a40:(q_AGU[c.i+"|"+k]||[]).length,a20:0,a15:e.p15,meta:null}};
 sa=function(e){var a=[];e.a40&&a.push(e.a40+" aguardando atendimento");e.a15&&a.push(e.a15+" parados há 15 dias ou mais");return a.length?a.join(", "):"Sem alertas"};
 Va=function(kind,lista){var k=q_KI[kind],ok={},out=[];lista.forEach(function(x){ok[x.c.i]=1});
   (D.aguard||[]).forEach(function(r){if(r[3]===k&&ok[r[2]])out.push({u:r[5]==="N"?0:1,id:r[0],cli:r[1]||"(sem título)",c:D.cors[r[2]].nome,al:(r[5]==="N"?"aguardando 1º atendimento há ":"sem atuação do corretor há ")+q_dur(r[4]),d:r[4]/1440})});
@@ -144,7 +150,11 @@ la=function(){var e=A.filter(function(q){return q.id===i.det})[0];if(!e)return k
   return h};
 window.__ciclo=function(kind,lista){var k=q_KI[kind],r=faixa(i.per),g=0,d=0;lista.forEach(function(x){g+=q_sum(q_FCH,x.c.i,k,r,1);d+=q_sum(q_FCH,x.c.i,k,r,3)});return g?Math.round(d/g)+" dias":"—"};
 window.__prevAt=function(kind,lista){var k=q_KI[kind],r=faixa(i.per,1),t=0;lista.forEach(function(x){t+=q_sum(q_NEG,x.c.i,k,r,1)});return t};
-window.__pri=function(kind,lista){var k=q_KI[kind],r=faixa(i.per),n=0,t=0,o=0;lista.forEach(function(x){var p=q_pri(x.c.i,k,r);n+=p.n;t+=p.s;o+=p.o});return n?{m:Math.round(t/n)+" min",d:Math.round(o/n*100)+"% em até 20 min úteis"}:{m:"—",d:"Sem atendimentos no período"}};
+window.__fmt=q_dur;
+window.__pri=function(kind,lista){var k=q_KI[kind],r=faixa(i.per),t={nh:0,sh:0,nc:0,sc:0,ok:0,es:0};lista.forEach(function(x){var p=q_pri(x.c.i,k,r);for(var f in t)t[f]+=p[f]});
+  var tot=t.nh+t.nc+t.es;if(!tot)return{m:"—",d:"Sem atendimentos no período"};
+  var d=q_priP(t)+"% no prazo (20 min úteis, fonte fria 1 dia)";if(t.es)d+=" · "+t.es+" redistribuído"+(t.es>1?"s":"");
+  var mm=q_priM(t);return{m:mm==null?"—":q_dur(mm),d:d}};
 da=function(){var e="lancamentos",a=Ae(e).map(function(p){return{c:p,m:Ne(p,e,i.per)}}),r=faixa(i.per),et={},perd=0,gan=0;
   a.forEach(function(x){var s=q_est(x.c.i,2);for(var n in s.et)et[n]=(et[n]||0)+s.et[n];perd+=q_sum(q_FCH,x.c.i,2,r,2);gan+=q_sum(q_FCH,x.c.i,2,r,1)});
   var li=[["Abordagem inicial","Abordagem inicial"],["Em atendimento","Em atendimento"],["Visita / reunião","Em reunião / Visita"],["Explorar mais imóveis","Explorar mais imóveis"],["Retorno em 45 a 90 dias","Retorno posterior 45-90 dias"],["Proposta e reserva","Proposta / em reserva"],["Aguardando assinatura","Aguardando assinatura"]].map(function(p){return[p[0],et[p[1]]||0]});
