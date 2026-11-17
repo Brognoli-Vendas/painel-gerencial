@@ -110,5 +110,5 @@ function tkt(tid,pk){var f=F(A.filter(function(c){return c.team===tid}),pk);if(f
 oe=function(t){var k=tkt(t.id,i.per);return k?window.__meta(t.id,i.per).m/k:0};
 Oe=function(t){var k=tkt(t.id,"mes");return k?window.__meta(t.id,"mes").m/k:0};
 i.hc={ar:1,av:1,prop:1,perd:1,conv:1,lc:1,lp:1,ll:1};
-if(D.erro){window.addEventListener("DOMContentLoaded",function(){var b=document.createElement("div");b.setAttribute("role","alert");b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99;background:#FDC10C;color:#1a1a1a;padding:8px 16px;font:14px sans-serif";b.textContent="Dados reais indisponíveis no momento ("+D.erro+"). Tente novamente em instantes.";document.body.appendChild(b)})}
+if(D.erro){window.addEventListener("DOMContentLoaded",function(){var b=document.createElement("div");b.setAttribute("role","alert");b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99;background:#FDC10C;color:#1a1a1a;padding:8px 16px;font:14px sans-serif";b.textContent="Os dados estão sendo atualizados. Recarregue a página em instantes.";document.body.appendChild(b)})}
 `;
