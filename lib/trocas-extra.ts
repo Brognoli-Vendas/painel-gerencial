@@ -13,11 +13,14 @@ const EXTRAS: [string, string][] = [
   ['cats:[1,2,3,4].map(function(w){var Z=window.__tri(', 'cats:window.__qs().map(function(w){var Z=window.__tri('],
   ["je(y,{dense:1})", "je(y,{dense:window.__qs().length>1?1:0})"],
   ["Trimestres de 2026. Valores em R$.", "'+window.__qlabel()+'. Valores em R$."],
-  ['if(a==="f-per")i.per=t;else if(a==="f-vert")', 'if(a==="f-per")i.per=t;else if(a==="f-tri")i.qsel=t;else if(a==="f-vert")'],
+  // Filtro de data (ano > trimestre > mês), no lugar do antigo seletor de trimestre; o período acompanha a escolha.
   [
     "S().verts.map(function(d){return[d,d]})),i.vert)),a.indexOf(\"eq\")>-1",
-    "S().verts.map(function(d){return[d,d]})),i.vert)+(e===\"bi-metas\"?X(\"f-tri\",\"Trimestre do gráfico\",[[\"auto\",\"Do período\"],[\"1\",\"T1 (jan a mar)\"],[\"2\",\"T2 (abr a jun)\"],[\"3\",\"T3 (jul a set)\"],[\"4\",\"T4 (out a dez)\"],[\"ano\",\"Ano todo\"]],i.qsel||\"auto\"):\"\")),a.indexOf(\"eq\")>-1",
+    "S().verts.map(function(d){return[d,d]})),i.vert)+(e===\"bi-metas\"?window.__dp():\"\")),a.indexOf(\"eq\")>-1",
   ],
+  // O período personalizado ("cus") não vira botão nem opção de período.
+  ["Object.keys(W).map(function(d){return'<button data-per=", "Object.keys(W).filter(function(d){return d!==\"cus\"}).map(function(d){return'<button data-per="],
+  ["Object.keys(W).map(function(e){return[e,W[e].nome]})", "Object.keys(W).filter(function(e){return e!==\"cus\"}).map(function(e){return[e,W[e].nome]})"],
 ];
 
 export function aplicarExtras(html: string): string {
