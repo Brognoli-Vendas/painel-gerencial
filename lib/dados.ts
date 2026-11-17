@@ -27,12 +27,18 @@ export type Dados = {
   est: [number, number, string][];
   /** Casos críticos: [card, título, corretor, funil, dias sem atualização] */
   crit: [number, string, number, number, number][];
-  /** Gestão de pauta por corretor: [corretor, imóveis, semProprietário, cadastroCompleto, semAtualização60d, diasMaisAntigo, códigoMaisAntigo, últimaAtualização, somaDiasDeVenda, vendidos12m] */
-  pauta: [number, number, number, number, number, number, string, string, number, number][];
+  /** Gestão de pauta por corretor: [corretor, imóveis, semProprietário, cadastroCompleto, semAtualização60d, diasMaisAntigo, códigoMaisAntigo, últimaAtualização, somaDiasDeVenda, vendidos12m, atualizadosEm30d] */
+  pauta: [number, number, number, number, number, number, string, string, number, number, number][];
   /** Imóveis que precisam de atenção: [código, título, corretor, motivo, dias em pauta] */
   pat: [string, string, number, string, number][];
   /** Imóveis liberados em pauta: [data, código, título, bairro e cidade, valor, responsável, coagenciadores, equipe] */
   libs: [string, string, string, string, number, number, number[], string][];
+  /** Agenciamentos vendidos: [corretor, 0, "AAAA-MM-DD,n;..."] */
+  avend: [number, number, string][];
+  /** Aguardando atendimento: [card, título, corretor, funil, minutos na etapa, N=iniciar atendimento / S=sem atuação] */
+  aguard: [string, string, number, number, number, string][];
+  /** Propostas geradas: [corretor, funil, "AAAA-MM-DD,n;..."]. Nulo se a Nekt não entrega o histórico. */
+  prop: [number, number, string][] | null;
 };
 
 type Bruto = {
@@ -56,6 +62,12 @@ type Equipe = {
   venda: string[][];
   pat: string[][];
   libs: string[][];
+  /** Agenciamentos vendidos por corretor (SPA Imóvel, etapa vendido). */
+  avend: string[][];
+  /** Negócios parados em "Iniciar Atendimento" ou "Sem atuação do corretor" (SLA vencido). */
+  aguard: string[][];
+  /** Propostas geradas (histórico de etapas). Nulo se o token da Nekt não enxerga a tabela. */
+  prop: string[][] | null;
 };
 
 function vertical(v: string): "Terceiros" | "Lançamentos" | null {
@@ -116,7 +128,15 @@ const DIAS_PAUTA = "date_diff('day', coalesce(ufcrm10liberadoempauta, createdtim
 async function buscarEquipe(): Promise<Equipe> {
   const corte = new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 10);
   const balde = (col: string) => `CASE WHEN ${DIA(col)} >= date '${corte}' THEN ${DIA(col)} ELSE date_trunc('month', ${DIA(col)}) END`;
-  const [neg, fch, est, crit, pauta, venda, pat, l1, l2] = await Promise.all([
+  // Propostas geradas = negócios que entraram em etapa de proposta (1ª vez). Precisa da tabela de histórico liberada no token.
+  const propP = nektSql(
+    `WITH h AS (SELECT owner_id, min(created_time) t FROM nekt_trusted.bitrix_deal_stage_history ` +
+      `WHERE stage_id IN ('C4:2','C4:4','C7:UC_GQAJQH','C3:PREPAYMENT_INVOICE') AND created_time >= timestamp '2025-10-01 00:00:00 UTC' GROUP BY 1), ` +
+      `b AS (SELECT CAST(d.assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("h.t")} dd, count(*) c FROM h JOIN nekt_service.fact_deals d ON CAST(d.deal_id AS varchar) = h.owner_id ` +
+      `WHERE d.tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
+      `SELECT u, k, array_join(array_agg(concat(CAST(dd AS varchar), ',', CAST(c AS varchar))), ';') FROM b GROUP BY 1,2`,
+  ).catch(() => null);
+  const [neg, fch, est, crit, pauta, venda, pat, l1, l2, avend, aguard] = await Promise.all([
     nektSql(
       `WITH b AS (SELECT CAST(assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("date_create")} d, count(*) c FROM nekt_service.fact_deals ` +
         `WHERE date_create >= timestamp '2025-10-01 00:00:00 UTC' AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
@@ -145,7 +165,8 @@ async function buscarEquipe(): Promise<Equipe> {
       `SELECT CAST(element_at(ufcrm10agenciador, 1) AS varchar) u, CAST(count(*) AS varchar) n, ` +
         `CAST(count_if(coalesce(cardinality(ufcrm10proprietarios),0) = 0) AS varchar) semprop, CAST(count_if(${CADASTRO_OK}) AS varchar) cad, ` +
         `CAST(count_if(date_diff('day', updatedtime, now()) > 60) AS varchar) p60, CAST(max(${DIAS_PAUTA}) AS varchar) maxd, ` +
-        `CAST(max_by(id, ${DIAS_PAUTA}) AS varchar) cod, CAST(max(date(updatedtime)) AS varchar) ult ` +
+        `CAST(max_by(id, ${DIAS_PAUTA}) AS varchar) cod, CAST(max(date(updatedtime)) AS varchar) ult, ` +
+        `CAST(count_if(date_diff('day', updatedtime, now()) <= 30) AS varchar) p30 ` +
         `FROM ${PAUTA} WHERE stageid = 'DT1046_20:NEW' AND coalesce(cardinality(ufcrm10agenciador),0) > 0 GROUP BY 1`,
     ),
     nektSql(
@@ -172,11 +193,24 @@ async function buscarEquipe(): Promise<Equipe> {
           `WHERE ufcrm10liberadoempauta >= timestamp '2025-10-01 00:00:00 UTC' AND ${cond} AND coalesce(cardinality(ufcrm10agenciador),0) > 0 ORDER BY 1 DESC LIMIT 1000`,
       ),
     ),
+    nektSql(
+      `WITH b AS (SELECT CAST(element_at(ufcrm10agenciador, 1) AS varchar) u, ${balde("coalesce(closedate, movedtime)")} d, count(*) c FROM ${PAUTA} ` +
+        `WHERE stageid = 'DT1046_20:SUCCESS' AND coalesce(closedate, movedtime) >= timestamp '2025-10-01 00:00:00 UTC' AND coalesce(cardinality(ufcrm10agenciador),0) > 0 GROUP BY 1,2) ` +
+        `SELECT u, '0', array_join(array_agg(concat(CAST(d AS varchar), ',', CAST(c AS varchar))), ';') FROM b GROUP BY 1`,
+    ),
+    nektSql(
+      `SELECT CAST(deal_id AS varchar), substr(title, 1, 60), CAST(assigned_by_id AS varchar), CAST(${FUNIL} AS varchar), ` +
+        `CAST(date_diff('minute', coalesce(moved_time, date_modify), now()) AS varchar), CASE WHEN stage_id LIKE '%:NEW' THEN 'N' ELSE 'S' END ` +
+        `FROM nekt_service.fact_deals WHERE stage_semantic_id = 'P' AND stage_id IN ('C4:NEW','C7:NEW','C3:NEW','C4:PREPARATION','C7:PREPARATION','C3:5') ` +
+        `AND tipo_lead IN ${TIPOS} ORDER BY date_diff('minute', coalesce(moved_time, date_modify), now()) DESC LIMIT 500`,
+    ),
   ]);
-  for (const r of [neg, fch, est, crit, pauta, venda, pat, l1, l2]) if (r.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
+  const prop = await propP;
+  for (const r of [neg, fch, est, crit, pauta, venda, pat, l1, l2, avend, aguard]) if (r.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
+  if (prop?.truncado) throw new Error("Nekt devolveu resultado parcial (equipe).");
   return {
     neg: neg.linhas, fch: fch.linhas, est: est.linhas, crit: crit.linhas, pauta: pauta.linhas, venda: venda.linhas, pat: pat.linhas,
-    libs: [...l1.linhas, ...l2.linhas],
+    libs: [...l1.linhas, ...l2.linhas], avend: avend.linhas, aguard: aguard.linhas, prop: prop ? prop.linhas : null,
   };
 }
 
@@ -320,7 +354,7 @@ const num = (s: string) => {
 
 /** Monta os dados que este usuário pode ver (nada além do escopo dele sai do servidor). */
 export async function carregarDados(perfil: Perfil): Promise<Dados> {
-  const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [] };
+  const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null };
   let b: Bruto;
   try {
     b = await bruto();
@@ -388,7 +422,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
     }
     metas.push(...soma.values());
   }
-  const out: Dados = { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas, neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [] };
+  const out: Dados = { hoje: hojeSP(), atualizado: b.atualizado, erro: null, teams, cors, vendas, metas, neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null };
   if (mostraNumeros && b.eq) montarEquipe(out, b.eq, porUsuario, idsVisiveis);
   return out;
 }
@@ -406,6 +440,12 @@ function montarEquipe(out: Dados, e: Equipe, porUsuario: Map<string, number>, eq
   out.neg = empacotar(e.neg);
   out.fch = empacotar(e.fch);
   out.est = empacotar(e.est);
+  out.avend = empacotar(e.avend ?? []);
+  for (const l of e.aguard ?? []) {
+    const c = ix(l[2]);
+    if (c >= 0) out.aguard.push([l[0], l[1], c, num(l[3]), num(l[4]), l[5]]);
+  }
+  out.prop = e.prop ? empacotar(e.prop) : null;
   for (const l of e.crit) {
     const c = ix(l[2]);
     if (c >= 0) out.crit.push([num(l[0]), l[1], c, num(l[3]), num(l[4])]);
@@ -415,7 +455,7 @@ function montarEquipe(out: Dados, e: Equipe, porUsuario: Map<string, number>, eq
     const c = ix(l[0]);
     if (c < 0) continue;
     const v = venda.get(l[0]) ?? [0, 0];
-    out.pauta.push([c, num(l[1]), num(l[2]), num(l[3]), num(l[4]), num(l[5]), l[6], l[7], v[1], v[0]]);
+    out.pauta.push([c, num(l[1]), num(l[2]), num(l[3]), num(l[4]), num(l[5]), l[6], l[7], v[1], v[0], num(l[8])]);
   }
   for (const l of e.pat) {
     const c = ix(l[2]);
