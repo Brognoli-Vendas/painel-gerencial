@@ -20,7 +20,7 @@ const EXTRAS: [string, string][] = [
     '.join("")+"</div></div>"+(e.indexOf("bi-")===0?window.__dp():"")),a.indexOf("vert")>-1',
   ],
   // O período personalizado ("cus") não vira botão nem opção de período.
-  ["Object.keys(W).map(function(d){return'<button data-per=", "Object.keys(W).filter(function(d){return d!==\"cus\"}).map(function(d){return'<button data-per=\""],
+  ["Object.keys(W).map(function(d){return'<button data-per=", "Object.keys(W).filter(function(d){return d!==\"cus\"}).map(function(d){return'<button data-per="],
   ["Object.keys(W).map(function(e){return[e,W[e].nome]})", "Object.keys(W).filter(function(e){return e!==\"cus\"}).map(function(e){return[e,W[e].nome]})"],
   // Fechamentos: período anterior calculado de verdade com os mesmos filtros (antes era estimado por proporção); ticket médio em VGV, como no BI.
   ["r=F(a,i.per,1),v=t.length?n/t.length:0,p=r.vendas*v,c=r.fat*v", "r=window.__prev(a,ka),v=t.length?n/t.length:0,p=r.n,c=r.f"],
