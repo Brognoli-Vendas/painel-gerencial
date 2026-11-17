@@ -36,7 +36,7 @@ const EXTRAS: [string, string][] = [
   ["Math.round(t.cyc+p()*3)+' dias</div>", "window.__ciclo(e,a)+'</div>"],
   ["T(s,Math.round(s*.93))", "T(s,window.__prevAt(e,a))"],
   ["(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" acima de 40 min, \"+r+\" parados há 15 dias</span>", "(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" aguardando atendimento, \"+r+\" parados há 15 dias ou mais</span>"],
-  ["n.m.pri+' min</td>", "(n.m.pri==null?\"—\":n.m.pri+' min')+'</td>"],
+  ["n.m.pri+' min</td>", "(n.m.pri==null?\"—\":window.__fmt(n.m.pri)+(n.m.pp==null?\"\":'<div class=\"k\" style=\"font-size:12px;font-weight:400\">'+n.m.pp+'% no prazo</div>'))+'</td>"],
   ["'</td><td class=\"num\">'+n.m.meta+\"%</td></tr>\"", "\"</td></tr>\""],
   ["<th>Alertas</th><th>Metas da semana</th>", "<th>Alertas</th>"],
   ['<td colspan="7" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>', '<td colspan="6" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>'],
