@@ -24,7 +24,12 @@ const EXTRAS: [string, string][] = [
   // Fechamentos: período anterior calculado de verdade com os mesmos filtros (antes era estimado por proporção); ticket médio em VGV, como no BI.
   ["r=F(a,i.per,1),v=t.length?n/t.length:0,p=r.vendas*v,c=r.fat*v", "r=window.__prev(a,ka),v=t.length?n/t.length:0,p=r.n,c=r.f"],
   ["T(d,r.vgv*v)", "T(d,r.g)"],
-  ['ue("Ticket médio",P(l),T(l,p?c/p:0))', 'ue("Ticket médio (VGV)",P(n?d/n:0),T(n?d/n:0,p?r.g/p:0))'],
+  ['ue("Ticket médio",P(l),T(l,p?c/p:0))', 'ue("Ticket médio (VGV)",window.__p2(n?d/n:0),T(n?d/n:0,p?r.g/p:0))'],
+  // Cartões do topo (Fechamentos e Metas): valores totais com centavos, como no BI atual.
+  ['ue("VGC Brognoli",P(o)', 'ue("VGC Brognoli",window.__p2(o)'],
+  ['ue("VGV total",P(d)', 'ue("VGV total",window.__p2(d)'],
+  ['ue("VGC Brognoli",P(r)', 'ue("VGC Brognoli",window.__p2(r)'],
+  ['ue("VGV total",P(vg)', 'ue("VGV total",window.__p2(vg)'],
 ];
 
 export function aplicarExtras(html: string): string {

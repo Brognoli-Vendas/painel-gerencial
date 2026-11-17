@@ -32,6 +32,7 @@ ze=function(c){return meses6().map(function(m){var o={v:0,f:0};(porCor[c.i]||[])
 we=meses6().map(function(m){return MN[+m.slice(5)-1]});
 window.__serie6=function(cs,kaf){var ms=meses6(),o=[0,0,0,0,0,0];cs.forEach(function(c){(porCor[c.i]||[]).forEach(function(v){var k=ms.indexOf(v[0].slice(0,7));if(k>-1&&kaf(rec(c,v),null))o[k]++})});return o};
 window.__prev=function(cs,kaf){var r=faixa(i.per,1),o={n:0,f:0,g:0};cs.forEach(function(c){(porCor[c.i]||[]).forEach(function(v){if(v[0]>=r[0]&&v[0]<=r[1]){var x=rec(c,v);if(kaf(x,null)){o.n++;o.f+=x.f;o.g+=x.g}}})});return o};
+window.__p2=function(e){return e.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2})};
 var metaIx={};D.metas.forEach(function(m){metaIx[m[0]+"|"+m[1]]=[m[2],m[3]]});
 window.__meta=function(tid,pk){var tot=[0,0];function am(k,f){var x=metaIx[k+"|"+tid];if(x){tot[0]+=x[0]*f;tot[1]+=x[1]*f}}
   var y=HJ.getUTCFullYear(),m=HJ.getUTCMonth();
