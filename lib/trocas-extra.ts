@@ -31,12 +31,12 @@ const EXTRAS: [string, string][] = [
   ['ue("VGV total",P(d)', 'ue("VGV total",window.__p2(d)'],
   ['ue("VGC Brognoli",P(r)', 'ue("VGC Brognoli",window.__p2(r)'],
   ['ue("VGV total",P(vg)', 'ue("VGV total",window.__p2(vg)'],
-  // Minha Equipe com dados reais: sem 1º atendimento (em breve) nem metas da semana (regras a validar com a Brognoli), ciclo e período anterior reais.
-  ["Math.round(d/v)+' min</div><div class=\"d\"><span class=\"flat\">Meta 20 min</span>", "\"—\"+'</div><div class=\"d\"><span class=\"flat\">Em breve</span>"],
+  // Minha Equipe com dados reais: 1º atendimento em minutos úteis (histórico de etapas), sem metas da semana (regras a validar com a Brognoli), ciclo e período anterior reais.
+  ["Math.round(d/v)+' min</div><div class=\"d\"><span class=\"flat\">Meta 20 min</span>", "window.__pri(e,a).m+'</div><div class=\"d\"><span class=\"flat\">'+window.__pri(e,a).d+'</span>"],
   ["Math.round(t.cyc+p()*3)+' dias</div>", "window.__ciclo(e,a)+'</div>"],
   ["T(s,Math.round(s*.93))", "T(s,window.__prevAt(e,a))"],
   ["(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" acima de 40 min, \"+r+\" parados há 15 dias</span>", "(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" aguardando atendimento, \"+r+\" parados há 15 dias ou mais</span>"],
-  ["n.m.pri+' min</td>", "\"—\"+'</td>"],
+  ["n.m.pri+' min</td>", "(n.m.pri==null?\"—\":n.m.pri+' min')+'</td>"],
   ["'</td><td class=\"num\">'+n.m.meta+\"%</td></tr>\"", "\"</td></tr>\""],
   ["<th>Alertas</th><th>Metas da semana</th>", "<th>Alertas</th>"],
   ['<td colspan="7" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>', '<td colspan="6" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>'],
