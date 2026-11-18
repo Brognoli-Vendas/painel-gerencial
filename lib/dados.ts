@@ -142,7 +142,7 @@ async function buscarEquipe(): Promise<Equipe> {
   // Propostas geradas = negócios que entraram em etapa de proposta (1ª vez). Precisa da tabela de histórico liberada no token.
   const propP = nektSql(
     `WITH h AS (SELECT owner_id, min(created_time) t FROM nekt_trusted.bitrix_deal_stage_history ` +
-      `WHERE stage_id IN ('C4:2','C4:4','C7:UC_GQAJQH','C3:PREPAYMENT_INVOICE') AND created_time >= timestamp '2025-10-01 00:00:00 UTC' GROUP BY 1), ` +
+      `WHERE stage_id IN ('C4:2','C4:4','C7:UC_GQAJQH','C3:PREPAYMENT_INVOICE') AND created_time >= timestamp '2025-01-01 00:00:00 UTC' GROUP BY 1), ` +
       `b AS (SELECT CAST(d.assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("h.t")} dd, count(*) c FROM h JOIN nekt_service.fact_deals d ON CAST(d.deal_id AS varchar) = h.owner_id ` +
       `WHERE d.tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
       `SELECT u, k, array_join(array_agg(concat(CAST(dd AS varchar), ',', CAST(c AS varchar))), ';') FROM b GROUP BY 1,2`,
@@ -152,7 +152,7 @@ async function buscarEquipe(): Promise<Equipe> {
   const priP = nektSql(
     `WITH h AS (SELECT owner_id, stage_id, created_time ct, CAST(created_time AS timestamp) - interval '3' hour t, lead(stage_id) OVER (PARTITION BY owner_id ORDER BY created_time, id) ns, ` +
       `CAST(lead(created_time) OVER (PARTITION BY owner_id ORDER BY created_time, id) AS timestamp) - interval '3' hour nt FROM nekt_trusted.bitrix_deal_stage_history WHERE CAST(category_id AS varchar) IN ('4','7','3')), ` +
-      `c AS (SELECT owner_id, ct, t, nt FROM h WHERE stage_id IN ('C4:NEW','C7:NEW','C3:NEW') AND ns IS NOT NULL AND ns NOT IN ('C4:NEW','C7:NEW','C3:NEW','C4:PREPARATION','C7:PREPARATION','C3:5') AND ct >= timestamp '2025-10-01 00:00:00 UTC'), ` +
+      `c AS (SELECT owner_id, ct, t, nt FROM h WHERE stage_id IN ('C4:NEW','C7:NEW','C3:NEW') AND ns IS NOT NULL AND ns NOT IN ('C4:NEW','C7:NEW','C3:NEW','C4:PREPARATION','C7:PREPARATION','C3:5') AND ct >= timestamp '2025-01-01 00:00:00 UTC'), ` +
       `m AS (SELECT c.owner_id, c.ct, sum(greatest(0, date_diff('second', greatest(c.t, CAST(u.d AS timestamp) + interval '8' hour), least(c.nt, CAST(u.d AS timestamp) + CASE WHEN day_of_week(u.d) = 6 THEN interval '13' hour ELSE interval '18' hour END)))) / 60.0 mins ` +
       `FROM c CROSS JOIN UNNEST(sequence(date(c.t), date(c.nt), interval '1' day)) AS u(d) WHERE day_of_week(u.d) < 7 GROUP BY 1,2), ` +
       `b AS (SELECT CAST(d.assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("m.ct")} dd, count(*) n, sum(m.mins) s, count_if(m.mins <= 20) ok FROM m JOIN nekt_service.fact_deals d ON CAST(d.deal_id AS varchar) = m.owner_id ` +
@@ -162,13 +162,13 @@ async function buscarEquipe(): Promise<Equipe> {
   const [neg, fch, est, crit, pauta, venda, pat, l1, l2, avend, aguard] = await Promise.all([
     nektSql(
       `WITH b AS (SELECT CAST(assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("date_create")} d, count(*) c FROM nekt_service.fact_deals ` +
-        `WHERE date_create >= timestamp '2025-10-01 00:00:00 UTC' AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
+        `WHERE date_create >= timestamp '2025-01-01 00:00:00 UTC' AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
         `SELECT u, k, array_join(array_agg(concat(CAST(d AS varchar), ',', CAST(c AS varchar))), ';') FROM b GROUP BY 1,2`,
     ),
     nektSql(
       `WITH b AS (SELECT CAST(assigned_by_id AS varchar) u, ${FUNIL} k, ${balde("closedate")} d, count_if(stage_semantic_id = 'S') g, count_if(stage_semantic_id = 'F') l, ` +
         `coalesce(sum(CASE WHEN stage_semantic_id = 'S' THEN date_diff('day', date_create, closedate) END), 0) dias FROM nekt_service.fact_deals ` +
-        `WHERE closedate >= timestamp '2025-10-01 00:00:00 UTC' AND stage_semantic_id IN ('S','F') AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
+        `WHERE closedate >= timestamp '2025-01-01 00:00:00 UTC' AND stage_semantic_id IN ('S','F') AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
         `SELECT u, k, array_join(array_agg(concat(CAST(d AS varchar), ',', CAST(g AS varchar), ',', CAST(l AS varchar), ',', CAST(dias AS varchar))), ';') FROM b GROUP BY 1,2`,
     ),
     nektSql(
@@ -218,7 +218,7 @@ async function buscarEquipe(): Promise<Equipe> {
     ),
     nektSql(
       `WITH b AS (SELECT CAST(element_at(ufcrm10agenciador, 1) AS varchar) u, ${balde("coalesce(closedate, movedtime)")} d, count(*) c FROM ${PAUTA} ` +
-        `WHERE stageid = 'DT1046_20:SUCCESS' AND coalesce(closedate, movedtime) >= timestamp '2025-10-01 00:00:00 UTC' AND coalesce(cardinality(ufcrm10agenciador),0) > 0 GROUP BY 1,2) ` +
+        `WHERE stageid = 'DT1046_20:SUCCESS' AND coalesce(closedate, movedtime) >= timestamp '2025-01-01 00:00:00 UTC' AND coalesce(cardinality(ufcrm10agenciador),0) > 0 GROUP BY 1,2) ` +
         `SELECT u, '0', array_join(array_agg(concat(CAST(d AS varchar), ',', CAST(c AS varchar))), ';') FROM b GROUP BY 1`,
     ),
     nektSql(
@@ -244,7 +244,7 @@ async function buscar(): Promise<Bruto> {
   const [vendas, metas, dim, ult, mp, eq] = await Promise.all([
     nektSql(
       "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel " +
-        "FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-10-01' ORDER BY created_date",
+        "FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01' ORDER BY created_date",
     ),
     nektSql(
       "SELECT created_year, created_month, equipe_codigo, nome_equipe_final, equipe_vertical, meta, supermeta FROM nekt_service.fact_metas_equipes WHERE CAST(created_year AS integer) >= 2025",
