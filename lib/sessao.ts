@@ -11,11 +11,15 @@ export async function exigirSessao(opcoes?: { permitirTrocaSenha?: boolean }): P
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login");
 
-  const { data: p } = await supabase
-    .from("perfis")
-    .select("id, nome, email, nivel, vertical, equipes, admin, ativo, trocar_senha")
-    .eq("id", auth.user.id)
-    .maybeSingle();
+  // Perfil e ajustes de permissão em paralelo (uma ida ao banco em vez de duas).
+  const [{ data: p }, { data: ajustes }] = await Promise.all([
+    supabase
+      .from("perfis")
+      .select("id, nome, email, nivel, vertical, equipes, admin, ativo, trocar_senha")
+      .eq("id", auth.user.id)
+      .maybeSingle(),
+    supabase.from("permissoes_usuario").select("chave, permitido").eq("usuario_id", auth.user.id),
+  ]);
 
   if (!p || !p.ativo) {
     await supabase.auth.signOut();
@@ -24,11 +28,6 @@ export async function exigirSessao(opcoes?: { permitirTrocaSenha?: boolean }): P
 
   // Senha provisória definida pelo administrador: a pessoa precisa trocar antes de usar o painel.
   if (p.trocar_senha && !opcoes?.permitirTrocaSenha) redirect("/conta/senha");
-
-  const { data: ajustes } = await supabase
-    .from("permissoes_usuario")
-    .select("chave, permitido")
-    .eq("usuario_id", auth.user.id);
 
   const perfil: Perfil = {
     id: p.id,

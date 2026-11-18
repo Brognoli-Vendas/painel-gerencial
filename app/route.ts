@@ -7,6 +7,7 @@ import { carregarUsuariosAdmin } from "@/lib/usuarios-admin";
 import { aplicarPermissoes, restringirDados } from "@/lib/permissoes-cliente";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 120; // a renovação dos dados na Nekt roda depois da resposta
 
 /** A aplicação: a última versão validada do esboço, atrás do login. */
 export async function GET() {

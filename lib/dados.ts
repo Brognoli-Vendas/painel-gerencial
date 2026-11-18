@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { nektSql } from "@/lib/nekt";
 import type { Perfil } from "@/lib/permissions";
 
@@ -290,14 +291,13 @@ async function buscar(): Promise<Bruto> {
   return { teams, vendas: vendas.linhas, metas: metas.linhas, metasPainel: mp ? mp.linhas : null, dim: dim.linhas, atualizado: ult.linhas[0]?.[0] ?? null, eq };
 }
 
-const TTL_MS = 60_000;
+const TTL_MS = 5 * 60_000; // dados com mais de 5 minutos são renovados em segundo plano
 const RETENTA_MS = 60_000; // depois de uma falha, não insiste na Nekt por 1 minuto
-const GRAVA_A_CADA_MS = 10 * 60_000;
 const CHAVE = "bruto-v1";
 let cache: { em: number; dado: Bruto } | null = null;
 let voo: Promise<Bruto> | null = null;
+let lendo: Promise<{ em: number; dado: Bruto } | null> | null = null;
 let proximaTentativa = 0;
-let ultimaGravacao = 0;
 
 /** Chamada às funções do banco que guardam a cópia dos dados (segredo só no servidor). */
 async function rpc<T>(fn: string, corpo: Record<string, unknown>, semChave = false): Promise<T | null> {
@@ -328,38 +328,25 @@ async function gravarCopia(d: Bruto) {
   await rpc("snapshot_gravar", { p_dados: g });
 }
 
-async function lerCopia(): Promise<Bruto | null> {
-  const r = await rpc<{ dados: Guardado }[]>("snapshot_ler", {});
+async function lerCopia(): Promise<{ em: number; dado: Bruto } | null> {
+  const r = await rpc<{ dados: Guardado; atualizado_em: string }[]>("snapshot_ler", {});
   const g = r?.[0]?.dados;
   if (!g || !Array.isArray(g.teams) || !Array.isArray(g.vendas)) return null;
-  return { ...g, teams: new Map(g.teams) };
+  const em = Date.parse(r?.[0]?.atualizado_em ?? "");
+  return { em: Number.isFinite(em) ? em : 0, dado: { ...g, teams: new Map(g.teams) } };
 }
 
-/**
- * Dados da Nekt com rede de segurança: se a Nekt falhar, usa a última leitura em memória
- * e, se não houver, a cópia guardada no banco. O usuário não vê erro enquanto existir algum dado.
- */
-async function bruto(): Promise<Bruto> {
-  if (cache && Date.now() - cache.em < TTL_MS) return cache.dado;
-  if (cache && Date.now() < proximaTentativa) return cache.dado;
+/** Busca na Nekt e grava a cópia no banco. Uma só busca por vez em cada instância. */
+function renovar(): Promise<Bruto> {
   if (!voo) {
     voo = buscar()
       .then(async (d) => {
         cache = { em: Date.now(), dado: d };
-        if (Date.now() - ultimaGravacao > GRAVA_A_CADA_MS) {
-          ultimaGravacao = Date.now();
-          await gravarCopia(d);
-        }
+        await gravarCopia(d);
         return d;
       })
-      .catch(async (e) => {
+      .catch((e) => {
         proximaTentativa = Date.now() + RETENTA_MS;
-        if (cache) return cache.dado;
-        const c = await lerCopia();
-        if (c) {
-          cache = { em: Date.now() - TTL_MS + 15_000, dado: c };
-          return c;
-        }
         throw e;
       })
       .finally(() => {
@@ -367,6 +354,53 @@ async function bruto(): Promise<Bruto> {
       });
   }
   return voo;
+}
+
+/** Renova em segundo plano, depois de responder à pessoa (ela nunca espera a Nekt). */
+function renovarDepois() {
+  if (voo || Date.now() < proximaTentativa) return;
+  const t = renovar().catch(() => null);
+  try {
+    after(() => t);
+  } catch {
+    // fora de uma requisição: a busca segue sozinha
+  }
+}
+
+/**
+ * Dados do painel sem esperar a Nekt: usa a última leitura em memória ou, se a instância
+ * acabou de subir, a cópia guardada no banco, e renova em segundo plano quando estiver velha.
+ * Só espera a Nekt se nunca houve nenhuma cópia.
+ */
+async function bruto(): Promise<Bruto> {
+  if (cache) {
+    if (Date.now() - cache.em > TTL_MS) renovarDepois();
+    return cache.dado;
+  }
+  if (!lendo) lendo = lerCopia().finally(() => { lendo = null; });
+  const c = await lendo;
+  if (c) {
+    if (!cache) cache = c;
+    if (Date.now() - c.em > TTL_MS) renovarDepois();
+    return cache.dado;
+  }
+  return renovar();
+}
+
+/** Chamado na tela de login: deixa a cópia atualizada enquanto a pessoa digita a senha. */
+export async function aquecerDados(): Promise<void> {
+  try {
+    if (cache && Date.now() - cache.em <= TTL_MS) return;
+    if (!cache) {
+      const c = await lerCopia();
+      if (c) cache = c;
+    }
+    if (!cache || Date.now() - cache.em > TTL_MS) {
+      if (Date.now() >= proximaTentativa) await renovar();
+    }
+  } catch {
+    // aquecer é só uma ajuda
+  }
 }
 
 function hojeSP(): string {

@@ -1,26 +1,34 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { entrar } from "./actions";
-import { Logo } from "@/components/Logo";
 
 export function FormLogin({ erroInicial }: { erroInicial?: string }) {
   const [estado, acao, pendente] = useActionState(entrar, erroInicial ? { erro: erroInicial } : undefined);
+  const [ver, setVer] = useState(false);
   return (
-    <form action={acao}>
-      <Logo />
-      <h1>Entrar no painel</h1>
-      {estado?.erro && <div className="aviso erro" role="alert">{estado.erro}</div>}
+    <form className="lg-form" action={acao}>
+      <h1>Entrar</h1>
+      <p className="lg-sub">Use o e-mail e a senha cadastrados pela administração do painel.</p>
+      {estado?.erro && <div className="lg-erro" role="alert">{estado.erro}</div>}
       <label>
         E-mail
-        <input name="email" type="email" autoComplete="username" required />
+        <input name="email" type="email" autoComplete="username" defaultValue={estado?.email ?? ""} autoFocus required />
       </label>
       <label>
         Senha
-        <input name="senha" type="password" autoComplete="current-password" required />
+        <span className="lg-senha">
+          <input name="senha" type={ver ? "text" : "password"} autoComplete="current-password" required />
+          <button type="button" className="lg-ver" onClick={() => setVer((v) => !v)} aria-pressed={ver}>
+            {ver ? "Ocultar" : "Mostrar"}
+          </button>
+        </span>
       </label>
-      <button className="btn" disabled={pendente}>{pendente ? "Entrando…" : "Entrar"}</button>
-      <p className="nota">Esqueceu a senha? Peça uma nova à administração do painel.</p>
+      <button className="lg-entrar" disabled={pendente}>
+        {pendente && <span className="lg-spin" aria-hidden="true" />}
+        {pendente ? "Entrando…" : "Entrar"}
+      </button>
+      <p className="lg-nota">Esqueceu a senha? Peça uma nova à administração do painel.</p>
     </form>
   );
 }

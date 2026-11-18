@@ -1,0 +1,42 @@
+.lg{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);background:var(--paper)}
+.lg-marca{position:relative;overflow:hidden;background:var(--g900);color:#fff;display:flex;flex-direction:column;justify-content:flex-start;gap:0;padding:48px clamp(32px,5vw,80px) 56px}
+.lg-marca .lg-texto{margin-top:clamp(40px,13vh,130px)}
+.lg-marca>*{position:relative;z-index:1}
+.lg-marca .lg-logo{width:150px;height:auto;color:#fff}
+.lg-marca h2{font-size:clamp(32px,3.6vw,52px);line-height:1.06;letter-spacing:-.03em;font-weight:600;max-width:12ch}
+.lg-marca p{color:#CFCFCA;font-size:17px;line-height:1.5;max-width:34ch;margin-top:18px}
+.lg-barra{display:block;width:56px;height:6px;border-radius:3px;background:var(--y);margin-bottom:24px}
+.lg-skyline{position:absolute!important;z-index:0!important;right:-12px;bottom:0;width:min(72%,500px);height:auto;pointer-events:none}
+.lg-lado{display:grid;place-items:center;padding:40px 28px}
+.lg-form{width:100%;max-width:380px;display:grid;gap:18px}
+.lg-form h1{font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-.025em;color:var(--g900)}
+.lg-form .lg-sub{color:var(--g500);font-size:15px;line-height:1.45;margin-top:-6px}
+.lg-form label{display:grid;gap:6px;font-size:13px;font-weight:600;color:var(--g900)}
+.lg-form input{height:46px;border:1px solid var(--g300);border-radius:8px;background:#fff;padding:0 14px;font:inherit;font-size:16px;font-weight:400;color:var(--g900);width:100%;transition:border-color .12s,box-shadow .12s}
+.lg-form input:hover{border-color:var(--g500)}
+.lg-form input:focus{outline:none;border-color:var(--g900);box-shadow:0 0 0 3px var(--y)}
+.lg-senha{position:relative}
+.lg-senha input{padding-right:84px}
+.lg-ver{position:absolute;right:6px;top:6px;height:34px;padding:0 10px;border:0;background:transparent;color:var(--g700);font:inherit;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer}
+.lg-ver:hover{background:var(--paper)}
+.lg-ver:focus-visible{outline:2px solid var(--g900);outline-offset:1px}
+.lg-form .lg-entrar{height:48px;border:0;border-radius:8px;background:var(--y);color:var(--g900);font:inherit;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .12s}
+.lg-form .lg-entrar:hover{background:#EDB300}
+.lg-form .lg-entrar:focus-visible{outline:3px solid var(--g900);outline-offset:2px}
+.lg-form .lg-entrar:disabled{cursor:progress;background:#EDB300}
+.lg-spin{width:16px;height:16px;border:2px solid rgba(38,38,38,.25);border-top-color:var(--g900);border-radius:50%;animation:lg-gira .7s linear infinite}
+@keyframes lg-gira{to{transform:rotate(360deg)}}
+.lg-form .lg-erro{border-left:3px solid var(--neg);background:#fff;padding:10px 14px;border-radius:0 8px 8px 0;font-size:14px;color:var(--g900)}
+.lg-form .lg-nota{color:var(--g500);font-size:13px;line-height:1.4}
+.lg-topo{display:none}
+@media (max-width:880px){
+  .lg{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .lg-marca{padding:24px 24px 28px}
+  .lg-marca .lg-texto{margin-top:20px}
+  .lg-marca .lg-logo{width:112px}
+  .lg-marca h2{font-size:26px;max-width:none}
+  .lg-marca p,.lg-barra{display:none}
+  .lg-skyline{width:240px;opacity:.9}
+  .lg-lado{align-items:start;padding:28px 24px 40px}
+}
+@media (prefers-reduced-motion:reduce){.lg-spin{animation-duration:1.6s}.lg-form input,.lg-form .lg-entrar{transition:none}}
