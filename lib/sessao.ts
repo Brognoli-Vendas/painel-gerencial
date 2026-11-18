@@ -6,14 +6,14 @@ import { permissoesEfetivas, TELAS, type Perfil, type Permissoes } from "@/lib/p
 export type Sessao = { perfil: Perfil; permissoes: Permissoes };
 
 /** Carrega o usuário logado, o perfil e as permissões efetivas. Redireciona se algo faltar. */
-export async function exigirSessao(): Promise<Sessao> {
+export async function exigirSessao(opcoes?: { permitirTrocaSenha?: boolean }): Promise<Sessao> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login");
 
   const { data: p } = await supabase
     .from("perfis")
-    .select("id, nome, email, nivel, vertical, equipes, admin, ativo")
+    .select("id, nome, email, nivel, vertical, equipes, admin, ativo, trocar_senha")
     .eq("id", auth.user.id)
     .maybeSingle();
 
@@ -21,6 +21,9 @@ export async function exigirSessao(): Promise<Sessao> {
     await supabase.auth.signOut();
     redirect("/login?erro=inativo");
   }
+
+  // Senha provisória definida pelo administrador: a pessoa precisa trocar antes de usar o painel.
+  if (p.trocar_senha && !opcoes?.permitirTrocaSenha) redirect("/conta/senha");
 
   const { data: ajustes } = await supabase
     .from("permissoes_usuario")
@@ -48,5 +51,12 @@ export async function exigirTela(telaId: string): Promise<Sessao> {
   await supabase
     .from("registros_acesso")
     .insert({ usuario_id: sessao.perfil.id, evento: "visualizacao_tela", tela: tela?.rotulo ?? telaId });
+  return sessao;
+}
+
+/** Só administradores. Qualquer outra pessoa volta para o início. */
+export async function exigirAdmin(): Promise<Sessao> {
+  const sessao = await exigirSessao();
+  if (!sessao.perfil.admin) redirect("/?erro=sem-permissao");
   return sessao;
 }

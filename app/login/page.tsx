@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FormLogin } from "./form";
+import "../admin.css";
 
 export const metadata: Metadata = { title: "Entrar" };
 

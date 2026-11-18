@@ -20,6 +20,7 @@ export function FormLogin({ erroInicial }: { erroInicial?: string }) {
         <input name="senha" type="password" autoComplete="current-password" required />
       </label>
       <button className="btn" disabled={pendente}>{pendente ? "Entrando…" : "Entrar"}</button>
+      <p className="nota">Esqueceu a senha? Peça uma nova à administração do painel.</p>
     </form>
   );
 }
