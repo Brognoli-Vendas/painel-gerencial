@@ -27,6 +27,8 @@ export function restringirDados(d: Dados, p: Permissoes): Dados {
   const numeros = bi || eq; // Início também mostra vendas/faturamento a quem vê BI ou Desempenho
   return {
     ...d,
+    // Equipes em ordem alfabética em todos os filtros.
+    teams: [...d.teams].sort((x, y) => x.nome.localeCompare(y.nome, "pt-BR", { numeric: true })),
     // Nomes de equipes e corretores só para quem usa alguma tela que precise deles.
     cors: bi || eq || op ? d.cors : [],
     vendas: numeros ? d.vendas : [],
@@ -95,6 +97,34 @@ const TROCAS_PERM: [string, string][] = [
   ['_n++;_cd+=Ye("operacao-roletas","Operação"', 'if(window.__ops)_n++,_cd+=Ye(Te("operacao"),"Operação"'],
   ["if(_vz.length)_al.push", "if(window.__ops&&_vz.length)_al.push"],
   ["if(_pc2.length)_al.push", "if(window.__ops&&_pc2.length)_al.push"],
+  // Sem o aviso de exemplo no topo do Início.
+  [
+    '<span class="sample">Check-in, roletas e alertas: dados de exemplo</span></div>\';if(_as&&!window.__ops)',
+    "</div>';if(_as&&!window.__ops)",
+  ],
+  [
+    '<span class="sample">Check-in, roletas e alertas: dados de exemplo</span></div>\';p+=\'<div class="filters" role="group" aria-label="Vertical">',
+    '</div>\';p+=\'<div class="filters" role="group" aria-label="Vertical">',
+  ],
+  // BI: sem a faixa "Filtros ativos" (os próprios filtros já mostram a escolha).
+  ["function ya(){var e=[],", 'function ya(){return"";var e=[],'],
+  // Filtro de data (ano > trimestre > mês) em todas as telas com período, com histórico desde janeiro de 2025; o ano anterior vira período de comparação.
+  [
+    '+(e.indexOf("bi-")===0?window.__dp():"")),a.indexOf("vert")>-1',
+    '+window.__dp()),a.indexOf("vert")>-1',
+  ],
+  [
+    'if(d.k==="a"){if(mult)return["9999-01-01","9999-01-00"];a=ms1(d.y,0);b=add(ms1(d.y+1,0),-1)}',
+    'if(d.k==="a"){if(mult){a=ms1(d.y-1,0);b=add(ms1(d.y,0),-1);if(d.y===HJ.getUTCFullYear())b=new Date(Date.UTC(d.y-1,HJ.getUTCMonth(),HJ.getUTCDate()))}else{a=ms1(d.y,0);b=add(ms1(d.y+1,0),-1)}}',
+  ],
+  ["var m0=(q-1)*3;if(y===2025&&q<4)continue;if(y===Y0", "var m0=(q-1)*3;if(y===Y0"],
+  ["for(var m=m0;m<m0+3;m++){if(y===2025&&m<9)continue;if(y===Y0", "for(var m=m0;m<m0+3;m++){if(y===Y0"],
+  // Quem só tem BI entra direto no BI: o Início não existe para essa pessoa.
+  [
+    'function le(e){be(e)||(e="inicio")',
+    'function le(e){window.__soBI&&(e==="inicio"||!be(e))&&(e=Te("bi")),be(e)||(e="inicio")',
+  ],
+  ['if(!be(i.route))i.route="inicio";', 'if(!be(i.route))i.route=window.__soBI?Te("bi"):"inicio";'],
 ];
 
 function contar(s: string, trecho: string): number {
@@ -122,7 +152,8 @@ export function aplicarPermissoes(html: string, permissoes: Permissoes): string 
     "window.__rev=!!(window.__PERM[\"bi-fechamentos\"]||window.__PERM[\"bi-metas\"]||window.__PERM[\"equipe-desempenho\"]);" +
     "window.__ops=!!(window.__PERM[\"operacao-roletas\"]||window.__PERM[\"operacao-checkin\"]);" +
     "window.__inicioCompleto=!!((window.__PERM[\"bi-fechamentos\"]||window.__PERM[\"bi-metas\"])&&window.__PERM[\"equipe-desempenho\"]&&window.__ops);" +
-    "window.__menus=function(){var P=window.__PERM,m=[\"inicio\"];" +
+    "window.__soBI=!!((window.__PERM[\"bi-fechamentos\"]||window.__PERM[\"bi-metas\"])&&!window.__PERM[\"equipe-desempenho\"]&&!window.__ops&&!window.__PERM[\"admin-usuarios\"]&&!window.__PERM[\"admin-log\"]);" +
+    "window.__menus=function(){var P=window.__PERM,m=window.__soBI?[]:[\"inicio\"];" +
     "if(P[\"bi-fechamentos\"]||P[\"bi-metas\"])m.push(\"bi\");" +
     "if(P[\"equipe-desempenho\"])m.push(\"equipe\");" +
     "if(P[\"operacao-roletas\"]||P[\"operacao-checkin\"])m.push(\"operacao\");" +
