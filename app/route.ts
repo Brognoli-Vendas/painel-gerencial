@@ -3,6 +3,7 @@ import { lerEsboco, aplicarSessao } from "@/lib/esboco";
 import { carregarDados } from "@/lib/dados";
 import { aplicarExtras } from "@/lib/trocas-extra";
 import { aplicarAdmin } from "@/lib/admin-extra";
+import { carregarUsuariosAdmin } from "@/lib/usuarios-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const { perfil } = await exigirSessao();
   try {
-    const html = aplicarAdmin(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, await carregarDados(perfil))));
+    const usuarios = perfil.admin ? await carregarUsuariosAdmin() : [];
+    const html = aplicarAdmin(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, await carregarDados(perfil))), usuarios);
     return new Response(html, {
       headers: { "content-type": "text/html; charset=utf-8", "cache-control": "private, no-store" },
     });
