@@ -5,6 +5,7 @@ import { aplicarExtras } from "@/lib/trocas-extra";
 import { aplicarAdmin } from "@/lib/admin-extra";
 import { carregarUsuariosAdmin } from "@/lib/usuarios-admin";
 import { aplicarPermissoes, restringirDados } from "@/lib/permissoes-cliente";
+import { comAjusteCelular } from "@/lib/mobile-css";
 
 /** Nome e ícone da aba: o título do esboço antigo fica depois e é ignorado pelo navegador. */
 const CABECA = '<head><meta charset="utf-8">';
@@ -23,10 +24,12 @@ export async function GET() {
   try {
     const usuarios = perfil.admin ? await carregarUsuariosAdmin() : [];
     const dados = restringirDados(await carregarDados(perfil), permissoes);
-    const html = comAba(
-      aplicarPermissoes(
-        aplicarAdmin(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados)), usuarios),
-        permissoes,
+    const html = comAjusteCelular(
+      comAba(
+        aplicarPermissoes(
+          aplicarAdmin(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados)), usuarios),
+          permissoes,
+        ),
       ),
     );
     return new Response(html, {
