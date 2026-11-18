@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Painel gerencial Brognoli", template: "%s · Painel gerencial Brognoli" },
+  title: { default: "Gestão Brognoli", template: "%s · Gestão Brognoli" },
   robots: { index: false, follow: false },
 };
 
