@@ -1,4 +1,5 @@
 import "server-only";
+import { agruparHistorico } from "@/lib/historico";
 import { after } from "next/server";
 import { nektSql } from "@/lib/nekt";
 import type { Perfil } from "@/lib/permissions";
@@ -417,7 +418,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
   const vazio: Dados = { hoje: hojeSP(), atualizado: null, erro: null, teams: [], cors: [], vendas: [], metas: [], neg: [], fch: [], est: [], crit: [], pauta: [], pat: [], libs: [], avend: [], aguard: [], prop: null, pri: null, at: null, atDesde: null };
   let b: Bruto;
   try {
-    b = await bruto();
+    b = agruparHistorico(await bruto());
   } catch {
     return { ...vazio, erro: "indisponível" };
   }
