@@ -4,6 +4,7 @@ import { carregarDados } from "@/lib/dados";
 import { aplicarExtras } from "@/lib/trocas-extra";
 import { marcarChefes } from "@/lib/chefes";
 import { aplicarAjustesUI } from "@/lib/ajustes-ui";
+import { aplicarBloqueioEquipe } from "@/lib/ajustes-equipe";
 import { aplicarAdmin } from "@/lib/admin-extra";
 import { carregarUsuariosAdmin } from "@/lib/usuarios-admin";
 import { aplicarPermissoes, restringirDados } from "@/lib/permissoes-cliente";
@@ -29,7 +30,7 @@ export async function GET() {
     const html = comAjusteCelular(
       comAba(
         aplicarPermissoes(
-          aplicarAdmin(aplicarAjustesUI(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
+          aplicarAdmin(aplicarBloqueioEquipe(aplicarAjustesUI(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados)))), usuarios),
           permissoes,
         ),
       ),
