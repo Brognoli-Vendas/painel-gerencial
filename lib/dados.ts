@@ -16,7 +16,7 @@ export type Dados = {
   atualizado: string | null;
   erro: string | null;
   teams: { id: string; nome: string; vert: "Terceiros" | "Lançamentos" }[];
-  cors: { id: string; i: number; nome: string; team: string; vert: string }[];
+  cors: { id: string; i: number; nome: string; team: string; vert: string; g?: 1 }[];
   /** [data, indiceCorretor, fonte, unidade, categoria, empreendimento, vgv, vgc] */
   vendas: [string, number, string, string, string, string, number, number][];
   /** [AAAA-MM, equipe, meta, supermeta] */
@@ -25,7 +25,7 @@ export type Dados = {
   neg: [number, number, string][];
   /** [corretor, funil, "AAAA-MM-DD,ganhos,perdidos,diasDeCicloDosGanhos;..."] */
   fch: [number, number, string][];
-  /** Negócios abertos agora: [corretor, funil, "etapa|n|paradosHá15Dias;..."] */
+  /** Negócios abertos agora: [corretor, funil, "etapa|n|paradosHá5Dias;..."] */
   est: [number, number, string][];
   /** Casos críticos: [card, título, corretor, funil, dias sem atualização] */
   crit: [number, string, number, number, number][];
@@ -252,7 +252,7 @@ async function buscar(): Promise<Bruto> {
       "SELECT created_year, created_month, equipe_codigo, nome_equipe_final, equipe_vertical, meta, supermeta FROM nekt_service.fact_metas_equipes WHERE CAST(created_year AS integer) >= 2025",
     ),
     nektSql(
-      "SELECT corretor_nome, equipe_nome, CAST(user_id AS varchar) FROM nekt_service.dim_corretores_equipe WHERE CAST(active AS varchar) = 'true'",
+      "SELECT corretor_nome, equipe_nome, CAST(user_id AS varchar), work_position FROM nekt_service.dim_corretores_equipe WHERE CAST(active AS varchar) = 'true'",
     ),
     nektSql("SELECT CAST(max(modificado) AS varchar) FROM nekt_service.fact_fechamentos_final"),
     nektSql(
@@ -438,6 +438,8 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
   // Corretores: pares (nome, equipe) vindos das vendas e do cadastro ativo.
   const cors: Dados["cors"] = [];
   const indice = new Map<string, number>();
+  // Gerentes e diretores nunca entram em lista de corretor: quem aparece nas vendas fica marcado (g) para sumir das listas.
+  const chefes = new Set(b.dim.filter((l) => /gerente|diretor/i.test(l[3] ?? "")).map((l) => l[0]));
   const garantir = (nome: string, team: string, vert?: string) => {
     if (!nome || !idsVisiveis.has(team)) return -1;
     const v = vert ?? (vertDe.get(team) as string);
@@ -446,12 +448,13 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
     if (ix === undefined) {
       ix = cors.length;
       indice.set(k, ix);
-      cors.push({ id: "c" + ix, i: ix, nome, team, vert: v });
+      cors.push(chefes.has(nome) ? { id: "c" + ix, i: ix, nome, team, vert: v, g: 1 } : { id: "c" + ix, i: ix, nome, team, vert: v });
     }
     return ix;
   };
   const porUsuario = new Map<string, number>();
   for (const l of b.dim) {
+    if (chefes.has(l[0])) continue;
     const ix = garantir(l[0], l[1]);
     if (ix >= 0 && l[2]) porUsuario.set(l[2], ix);
   }
