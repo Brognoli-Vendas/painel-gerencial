@@ -92,7 +92,15 @@ const CSS_UX = `
 .xb .bll{height:auto;overflow:visible}
 .xb .bl{padding:6px 4px;font-size:14px}
 .xb .nm{display:block;-webkit-line-clamp:unset}
-.xb .pb,.xb .chartbox{height:auto;min-height:320px}
+.xb .pb,.xb .chartbox{height:min(62vh,520px);min-height:320px}
+.xb .chartbox{display:flex!important;flex-direction:column}
+.xb .chartbox>.cch{flex:1 1 0;height:0;min-height:0}
+.xb .chartbox .cgr,.xb .chartbox .ccs,.xb .chartbox .cc1{height:100%}
+.xb .chartbox .cbs{height:0;flex:1 1 0}
+.xb .chartbox .cb{max-width:64px}
+.xb .pb:has(.bll){height:auto;min-height:0}
+.xq{display:block;width:100%;height:40px;margin:0 0 10px;border:1px solid var(--line);border-radius:6px;padding:0 12px;font:inherit;font-size:14px;background:#fff}
+.xb .bl[hidden]{display:none}
 @media(max-width:900px){
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;align-items:end}
 .filters .f{min-width:0;max-width:none;flex:none}
@@ -138,8 +146,12 @@ function abrir(p){
   m.innerHTML='<div class="xdlg" role="dialog" aria-modal="true" aria-label="'+t.replace(/"/g,"")+'"><div class="xh"><h2></h2><button type="button" class="xx" data-xx="1">Fechar</button></div><div class="xb"></div></div>';
   m.querySelector("h2").textContent=t;
   var c=p.cloneNode(true),ph=c.querySelector(".ph");if(ph)ph.remove();
-  c.className="";c.removeAttribute("style");m.querySelector(".xb").appendChild(c);
-  document.body.appendChild(m);document.documentElement.style.overflow="hidden";m.querySelector(".xx").focus()}
+  c.className="";c.removeAttribute("style");
+  var xb=m.querySelector(".xb");
+  if(c.querySelector(".bl")){var q=document.createElement("input");q.type="search";q.className="xq";q.placeholder="Filtrar por nome";q.setAttribute("aria-label","Filtrar por nome");
+    q.addEventListener("input",function(){var v=q.value.trim().toLowerCase();[].forEach.call(c.querySelectorAll(".bl"),function(r){var n=(r.querySelector(".nm")||r).textContent.toLowerCase();r.hidden=v&&n.indexOf(v)<0})});xb.appendChild(q)}
+  xb.appendChild(c);
+  document.body.appendChild(m);document.documentElement.style.overflow="hidden";(m.querySelector(".xq")||m.querySelector(".xx")).focus()}
 document.addEventListener("click",function(e){
   var x=e.target.closest&&e.target.closest(".pexp");
   if(x){e.preventDefault();e.stopPropagation();abrir(x.closest(".panel"));return}
