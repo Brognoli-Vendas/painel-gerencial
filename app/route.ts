@@ -17,6 +17,16 @@ function comAba(html: string): string {
   return html.replace(CABECA, () => CABECA + ABA);
 }
 
+/** Só fora da produção: faixa fixa e título [DEV], para ninguém confundir os ambientes. */
+function comFaixaDev(html: string): string {
+  if (process.env.VERCEL_ENV === "production") return html;
+  const fim = "</body></html>";
+  if (!html.endsWith(fim)) throw new Error("fim da página não encontrado");
+  const faixa =
+    '<div style="position:fixed;left:0;right:0;bottom:0;z-index:2000;background:#FDC10C;color:#3B3B3B;font:600 12px Albert Sans,sans-serif;text-align:center;padding:4px 8px;pointer-events:none">AMBIENTE DE DESENVOLVIMENTO — não é a versão em uso</div>';
+  return html.replace("<title>Gestão Brognoli</title>", "<title>[DEV] Gestão Brognoli</title>").slice(0, -fim.length) + faixa + fim;
+}
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // a renovação dos dados na Nekt roda depois da resposta
 
@@ -26,14 +36,14 @@ export async function GET() {
   try {
     const usuarios = perfil.admin ? await carregarUsuariosAdmin() : [];
     const dados = restringirDados(await carregarDados(perfil), permissoes);
-    const html = aplicarUx(comAjusteCelular(
+    const html = comFaixaDev(aplicarUx(comAjusteCelular(
       comAba(
         aplicarPermissoes(
           aplicarAdmin(aplicarHist(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
           permissoes,
         ),
       ),
-    ));
+    )));
     return new Response(html, {
       headers: { "content-type": "text/html; charset=utf-8", "cache-control": "private, no-store" },
     });
