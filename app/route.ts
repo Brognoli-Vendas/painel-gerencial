@@ -2,6 +2,8 @@ import { exigirSessao } from "@/lib/sessao";
 import { lerEsboco, aplicarSessao } from "@/lib/esboco";
 import { carregarDados } from "@/lib/dados";
 import { aplicarExtras } from "@/lib/trocas-extra";
+import { marcarChefes } from "@/lib/chefes";
+import { aplicarAjustesUI } from "@/lib/ajustes-ui";
 import { aplicarAdmin } from "@/lib/admin-extra";
 import { carregarUsuariosAdmin } from "@/lib/usuarios-admin";
 import { aplicarPermissoes, restringirDados } from "@/lib/permissoes-cliente";
@@ -23,11 +25,11 @@ export async function GET() {
   const { perfil, permissoes } = await exigirSessao();
   try {
     const usuarios = perfil.admin ? await carregarUsuariosAdmin() : [];
-    const dados = restringirDados(await carregarDados(perfil), permissoes);
+    const dados = restringirDados(await marcarChefes(await carregarDados(perfil)), permissoes);
     const html = comAjusteCelular(
       comAba(
         aplicarPermissoes(
-          aplicarAdmin(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados)), usuarios),
+          aplicarAdmin(aplicarAjustesUI(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
           permissoes,
         ),
       ),

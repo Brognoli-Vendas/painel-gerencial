@@ -1,3 +1,5 @@
+import { CSS_UI } from "@/lib/ajustes-ui";
+
 /**
  * Ajustes para celular, injetados no fim da página (depois do CSS do esboço).
  * Só muda layout: nada de dados nem de regras de acesso.
@@ -46,5 +48,5 @@ html,body{max-width:100%;overflow-x:clip}
 export function comAjusteCelular(html: string): string {
   const fim = "</body></html>";
   if (!html.endsWith(fim)) throw new Error("fim da página não encontrado");
-  return html.slice(0, -fim.length) + "<style>" + CSS_CELULAR + "</style>" + fim;
+  return html.slice(0, -fim.length) + "<style>" + CSS_CELULAR + CSS_UI + "</style>" + fim;
 }
