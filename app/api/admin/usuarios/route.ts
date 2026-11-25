@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const NIVEL: Record<string, string> = { Diretoria: "diretoria", Gerente: "gerente", "Assistente comercial": "assistente" };
-const VERT: Record<string, string> = { Terceiros: "terceiros", "Lançamentos": "lancamentos", Todas: "todas" };
+// "Prontos" é o nome exibido de "Terceiros"; no banco a vertical segue como "terceiros".
+const VERT: Record<string, string> = { Prontos: "terceiros", Terceiros: "terceiros", "Lançamentos": "lancamentos", Todas: "todas" };
 
 type Corpo = {
   op?: string; id?: string; nome?: string; email?: string; senha?: string; nivel?: string; vert?: string;
