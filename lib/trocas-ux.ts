@@ -7,6 +7,11 @@
  */
 
 const TROCAS: [string, string, number?][] = [
+  // 0) Metas: só equipes ativas (sem as equipes extintas ANT-*, que só têm vendas antigas).
+  [
+    'function Be(){var e=Je(),a=ae(),t=e==="Lançamentos"?"VGCB":"Executado"',
+    'function Be(){var e=Je(),a=ae().filter(function(x){return x.id.indexOf("ANT-")!==0}),t=e==="Lançamentos"?"VGCB":"Executado"',
+  ],
   // 1) Nota removida da tela Desempenho por corretor.
   [
     '<p class="note" style="margin:-4px 0 10px">Leads aparecem apenas como quantidade recebida. Taxa de conversão: vendas divididas pelos leads recebidos de todos os tipos no período.</p>',
