@@ -109,8 +109,8 @@ const CSS_UX = `
 .filters .lnk2{justify-self:end;min-height:40px}
 .f select{width:100%;min-width:0;font-size:13px;padding:0 26px 0 10px}
 .dpf .dpb{width:100%;min-width:0}
-.dpp{position:fixed!important;left:8px!important;right:8px!important;width:auto!important;max-height:70dvh;overflow:auto}
-.segc{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+/* seletor de data: folha na base da tela (o painel do esboço é posicionado com top/transform e sumia do alcance) */
+.dpp{position:fixed!important;left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;transform:none!important;width:auto!important;min-width:0!important;max-width:none!important;max-height:78dvh;overflow:auto;z-index:1200;box-shadow:0 -8px 40px rgba(0,0,0,.28)}
 .pexp{width:40px;height:40px}
 }
 @media(max-width:600px){
