@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { iniciarJanelaAcesso } from "@/lib/acesso";
+import { iniciarJanelaAcesso, registrarFalhaLogin } from "@/lib/acesso";
 
 export type EstadoLogin = { erro?: string; email?: string } | undefined;
 
@@ -14,7 +14,13 @@ export async function entrar(_: EstadoLogin, formData: FormData): Promise<Estado
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-  if (error || !data.user) return { erro: "E-mail ou senha incorretos.", email };
+  if (error || !data.user) {
+    // A falha entra no log (depois de responder, sem atrasar a mensagem de erro).
+    after(async () => {
+      await registrarFalhaLogin(email);
+    });
+    return { erro: "E-mail ou senha incorretos.", email };
+  }
 
   // O registro do acesso não precisa atrasar a entrada: grava depois de responder.
   const id = data.user.id;
