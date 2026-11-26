@@ -308,7 +308,8 @@ async function buscar(): Promise<Bruto> {
 
 const TTL_MS = 5 * 60_000; // dados com mais de 5 minutos são renovados em segundo plano
 const RETENTA_MS = 60_000; // depois de uma falha, não insiste na Nekt por 1 minuto
-const CHAVE = "bruto-v1";
+// Chave da cópia no banco. v2: inclui as colunas do detalhe da venda; a produção (v1) não sobrescreve mais esta cópia.
+const CHAVE = "bruto-v2";
 let cache: { em: number; dado: Bruto } | null = null;
 let voo: Promise<Bruto> | null = null;
 let lendo: Promise<{ em: number; dado: Bruto } | null> | null = null;
