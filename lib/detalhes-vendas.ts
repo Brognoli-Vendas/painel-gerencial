@@ -9,6 +9,10 @@ import "server-only";
  */
 const REC = 'emp:v[5]||"(Em branco)",f:v[7],g:v[6]}';
 const FIM_FE = 'R+"</div></div>"}function Be(){';
+// Lista "Corretor" dos filtros: a mesma pessoa aparece uma vez por equipe (gerente, diretor, agenciador); mostra uma só vez, pelo id.
+const LISTA_COR = '[["todos","Todos os corretores"]].concat(n.map(function(d){return[d.id,d.nome]}))';
+const LISTA_COR_UNICA =
+  '[["todos","Todos os corretores"]].concat(n.filter(function(d,x,r){return r.findIndex(function(y){return y.id===d.id})===x}).map(function(d){return[d.id,d.nome]}))';
 
 const JS = String.raw`
 function vendasDetalhe(s){
@@ -57,7 +61,9 @@ const CSS = `
 export function aplicarDetalhesVendas(html: string): string {
   if (html.split(REC).length !== 2) throw new Error("ponto de troca do detalhe das vendas (registro) não encontrado");
   if (html.split(FIM_FE).length !== 2) throw new Error("ponto de troca do detalhe das vendas (Fechamentos) não encontrado");
-  let s = html.split(REC).join('emp:v[5]||"(Em branco)",f:v[7],g:v[6],r:v}');
+  if (html.split(LISTA_COR).length !== 2) throw new Error("ponto de troca da lista de corretores não encontrado");
+  let s = html.split(LISTA_COR).join(LISTA_COR_UNICA);
+  s = s.split(REC).join('emp:v[5]||"(Em branco)",f:v[7],g:v[6],r:v}');
   s = s.split(FIM_FE).join('R+"</div></div>"+vendasDetalhe(s)}' + JS + "function Be(){");
   const fim = "</body></html>";
   if (!s.endsWith(fim)) throw new Error("fim da página não encontrado");
