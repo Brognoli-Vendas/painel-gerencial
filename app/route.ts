@@ -11,6 +11,7 @@ import { aplicarUx } from "@/lib/trocas-ux";
 import { marcarAbertura } from "@/lib/acesso";
 import { aplicarRegistroTelas } from "@/lib/acesso-cliente";
 import { aplicarProntos } from "@/lib/prontos";
+import { comVendasTemporarias } from "@/lib/vendas-temp";
 
 /** Nome e ícone da aba: o título do esboço antigo fica depois e é ignorado pelo navegador. */
 const CABECA = '<head><meta charset="utf-8">';
@@ -39,7 +40,7 @@ export async function GET() {
   await marcarAbertura(perfil.id); // registra o acesso de quem já estava com a sessão aberta
   try {
     const usuarios = perfil.admin ? await carregarUsuariosAdmin() : [];
-    const dados = restringirDados(await carregarDados(perfil), permissoes);
+    const dados = restringirDados(await comVendasTemporarias(await carregarDados(perfil), perfil), permissoes);
     const html = comFaixaDev(aplicarProntos(aplicarUx(comAjusteCelular(
       aplicarRegistroTelas(
         comAba(
