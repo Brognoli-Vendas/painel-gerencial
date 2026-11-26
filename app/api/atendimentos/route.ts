@@ -62,8 +62,8 @@ function buscar(chave: string, nome: string, equipe: string, de: string, ate: st
   const q = (x: string) => x.replace(/'/g, "''");
   const voo = nektSql(
     `SELECT CAST(deal_id AS varchar), substr(coalesce(title,''), 1, 80), coalesce(stage_description,''), stage_semantic_id, CAST(${FUNIL} AS varchar), ` +
-      `CAST(${DIA("date_create")} AS varchar), CAST(${DIA("coalesce(last_activity_time, date_modify)")} AS varchar), ` +
-      `CAST(date_diff('day', coalesce(last_activity_time, date_modify), now()) AS varchar), coalesce(stage_id,''), ` +
+      `CAST(${DIA("date_create")} AS varchar), CAST(${DIA("date_modify")} AS varchar), ` +
+      `CAST(date_diff('day', date_modify, now()) AS varchar), coalesce(stage_id,''), ` +
       `CAST(date_diff('minute', coalesce(moved_time, date_modify), now()) AS varchar) ` +
       `FROM nekt_service.fact_deals WHERE CAST(assigned_by_id AS varchar) IN (SELECT DISTINCT CAST(user_id AS varchar) FROM nekt_service.dim_corretores_equipe WHERE corretor_nome = '${q(nome)}' AND equipe_nome = '${q(equipe)}' AND CAST(active AS varchar) = 'true') AND tipo_lead IN ${TIPOS} ` +
       `AND (stage_semantic_id = 'P' OR ${DIA("date_create")} BETWEEN date '${de}' AND date '${ate}' OR ${DIA("closedate")} BETWEEN date '${de}' AND date '${ate}') ` +

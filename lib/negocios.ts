@@ -34,15 +34,15 @@ async function rpc<T>(fn: string, corpo: Record<string, unknown>): Promise<T | n
   }
 }
 
-type Linha = string[]; // [id, título, etapa, situação, funil, criado, ült. atividade (dia), ült. atividade (s), etapa id, movido (s), fechado (dia)]
+type Linha = string[]; // [id, título, etapa, situação, funil, criado, modificado (dia), modificado (s), etapa id, movido (s), fechado (dia)]
 
 async function montar(): Promise<number> {
   const r = await nektSql(
     "WITH u AS (SELECT DISTINCT corretor_nome, equipe_nome, CAST(user_id AS varchar) uid FROM nekt_service.dim_corretores_equipe WHERE CAST(active AS varchar) = 'true') " +
       "SELECT u.corretor_nome, u.equipe_nome, json_format(CAST(array_agg(ARRAY[CAST(f.deal_id AS varchar), substr(coalesce(f.title,''),1,80), coalesce(f.stage_description,''), coalesce(f.stage_semantic_id,''), " +
       "CAST(CASE f.tipo_lead WHEN 'Comprador Terceiros' THEN 0 WHEN 'Proprietário' THEN 1 ELSE 2 END AS varchar), " +
-      "CAST(date(f.date_create AT TIME ZONE 'America/Sao_Paulo') AS varchar), CAST(date(coalesce(f.last_activity_time, f.date_modify) AT TIME ZONE 'America/Sao_Paulo') AS varchar), " +
-      "CAST(CAST(to_unixtime(coalesce(f.last_activity_time, f.date_modify)) AS bigint) AS varchar), coalesce(f.stage_id,''), CAST(CAST(to_unixtime(coalesce(f.moved_time, f.date_modify)) AS bigint) AS varchar), " +
+      "CAST(date(f.date_create AT TIME ZONE 'America/Sao_Paulo') AS varchar), CAST(date(f.date_modify AT TIME ZONE 'America/Sao_Paulo') AS varchar), " +
+      "CAST(CAST(to_unixtime(f.date_modify) AS bigint) AS varchar), coalesce(f.stage_id,''), CAST(CAST(to_unixtime(coalesce(f.moved_time, f.date_modify)) AS bigint) AS varchar), " +
       "CASE WHEN f.stage_semantic_id <> 'P' THEN coalesce(CAST(date(f.closedate AT TIME ZONE 'America/Sao_Paulo') AS varchar),'') ELSE '' END] ORDER BY f.date_create DESC) AS JSON)) " +
       `FROM u JOIN nekt_service.fact_deals f ON CAST(f.assigned_by_id AS varchar) = u.uid WHERE f.tipo_lead IN ${TIPOS} ` +
       "AND (f.stage_semantic_id = 'P' OR date(f.date_create AT TIME ZONE 'America/Sao_Paulo') >= current_date - interval '200' day OR date(f.closedate AT TIME ZONE 'America/Sao_Paulo') >= current_date - interval '200' day) GROUP BY 1, 2",
