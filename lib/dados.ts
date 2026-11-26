@@ -18,14 +18,15 @@ export type Dados = {
   teams: { id: string; nome: string; vert: "Terceiros" | "Lançamentos" }[];
   cors: { id: string; i: number; nome: string; team: string; vert: string; g?: 1 }[];
   /** [data, indiceCorretor, fonte, unidade, categoria, empreendimento, vgv, vgc] */
-  vendas: [string, number, string, string, string, string, number, number][];
+  vendas: [string, number, string, string, string, string, number, number, string?, string?, string?, string?, string?, string?][];
+  /** Extras (detalhe da venda): [..., negócio, código do imóvel ou empreendimento, comprador, proprietário(s), bairro, nome do empreendimento] */
   /** [AAAA-MM, equipe, meta, supermeta] */
   metas: [string, string, number, number][];
   /** Minha Equipe (negócios do Bitrix). [corretor, funil(0 comprador, 1 proprietário, 2 lançamentos), "AAAA-MM-DD,n;..."] */
   neg: [number, number, string][];
   /** [corretor, funil, "AAAA-MM-DD,ganhos,perdidos,diasDeCicloDosGanhos;..."] */
   fch: [number, number, string][];
-  /** Negócios abertos agora: [corretor, funil, "etapa|n|paradosHá5Dias;..."] */
+  /** Negócios abertos agora: [corretor, funil, "etapa|n|paradosHá1Dias;..."] */
   est: [number, number, string][];
   /** Casos críticos: [card, título, corretor, funil, dias sem atualização] */
   crit: [number, string, number, number, number][];
@@ -245,8 +246,21 @@ async function buscarEquipe(): Promise<Equipe> {
 async function buscar(): Promise<Bruto> {
   const [vendas, metas, dim, ult, mp, eq] = await Promise.all([
     nektSql(
-      "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel " +
-        "FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01' ORDER BY created_date",
+      // Detalhe da venda (lista do BI Fechamentos): comprador (contato do negócio), proprietário(s) e bairro do imóvel (SPA 1046) ou do empreendimento.
+      "WITH f AS (SELECT * FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01'), " +
+        "own AS (SELECT CAST(s.id AS varchar) sid, array_join(array_agg(DISTINCT trim(concat(coalesce(c.name,''),' ',coalesce(c.last_name,'')))), ' / ') nomes " +
+        "FROM nekt_trusted.bitrix_spa_1046 s CROSS JOIN UNNEST(s.ufcrm10proprietarios) AS u(p) " +
+        "LEFT JOIN nekt_trusted.bitrix_contacts c ON CAST(c.id AS varchar) = regexp_replace(CAST(u.p AS varchar), '^C_', '') " +
+        "WHERE CAST(s.id AS varchar) IN (SELECT codigo_imovel FROM f) GROUP BY 1) " +
+        "SELECT CAST(f.created_date AS varchar), f.corretor, f.fonte, f.unidade, f.categoria, f.empreendimento, f.vgv, f.vgc, f.equipe_codigo, f.equipe_vertical, f.nome_equipe_final, f.natureza_imovel, " +
+        "CAST(f.deal_id AS varchar), coalesce(f.codigo_imovel, ''), trim(concat(coalesce(cb.name,''),' ',coalesce(cb.last_name,''))), " +
+        "CASE WHEN f.natureza_imovel LIKE '%Terceiros%' THEN coalesce(own.nomes, '') ELSE '' END, " +
+        "trim(CASE WHEN f.natureza_imovel LIKE '%Terceiros%' THEN coalesce(s.ufcrm10bairro, '') ELSE coalesce(e.bairro, '') END), coalesce(e.nome, '') " +
+        "FROM f LEFT JOIN nekt_trusted.bitrix_contacts cb ON CAST(cb.id AS varchar) = CAST(f.contact_id AS varchar) " +
+        "LEFT JOIN own ON own.sid = f.codigo_imovel " +
+        "LEFT JOIN nekt_trusted.bitrix_spa_1046 s ON CAST(s.id AS varchar) = f.codigo_imovel AND f.natureza_imovel LIKE '%Terceiros%' " +
+        "LEFT JOIN nekt_service.cadastro_de_empreendimento e ON CAST(e.id AS varchar) = f.codigo_imovel AND f.natureza_imovel LIKE '%Lan%' " +
+        "ORDER BY f.created_date",
     ),
     nektSql(
       "SELECT created_year, created_month, equipe_codigo, nome_equipe_final, equipe_vertical, meta, supermeta FROM nekt_service.fact_metas_equipes WHERE CAST(created_year AS integer) >= 2025",
@@ -466,7 +480,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
       if (!vn || (ehDir && !vertOk(vn))) continue;
       const ix = garantir(l[1] || "Sem corretor", l[8], vn);
       if (ix < 0) continue;
-      vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7])]);
+      vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7]), l[12] ?? "", l[13] ?? "", l[14] ?? "", l[15] ?? "", l[16] ?? "", l[17] ?? ""]);
     }
   }
   const metas: Dados["metas"] = [];
