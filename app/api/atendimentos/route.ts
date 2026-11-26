@@ -26,27 +26,49 @@ export async function GET(req: Request) {
   const dt = /^\d{4}-\d{2}-\d{2}$/;
   if (!nome || !equipe || !dt.test(de) || !dt.test(ate)) return json({ erro: "pedido inválido" }, 400);
 
-  const dados = await carregarDados(perfil);
-  if (!dados.cors.some((c) => c.nome === nome && c.team === equipe && !c.g)) return json({ erro: "corretor fora do seu escopo" }, 403);
-
+  // Escopo e consulta andam juntos; a resposta só sai se o corretor estiver no escopo da pessoa.
+  const chave = [nome, equipe, de, ate].join("|");
+  const escopo = carregarDados(perfil).then((d) => d.cors.some((c) => c.nome === nome && c.team === equipe && !c.g));
+  const busca = buscar(chave, nome, equipe, de, ate);
+  busca.catch(() => {});
+  if (!(await escopo)) return json({ erro: "corretor fora do seu escopo" }, 403);
   try {
-    const q = (s: string) => s.replace(/'/g, "''");
-    const us = await nektSql(
-      `SELECT DISTINCT CAST(user_id AS varchar) FROM nekt_service.dim_corretores_equipe WHERE corretor_nome = '${q(nome)}' AND equipe_nome = '${q(equipe)}' AND CAST(active AS varchar) = 'true'`,
-    );
-    const ids = us.linhas.map((l) => l[0]).filter((x) => /^\d+$/.test(x));
-    if (!ids.length) return json({ rows: [], mais: false });
-    const r = await nektSql(
-      `SELECT CAST(deal_id AS varchar), substr(coalesce(title,''), 1, 80), coalesce(stage_description,''), stage_semantic_id, CAST(${FUNIL} AS varchar), ` +
-        `CAST(${DIA("date_create")} AS varchar), CAST(${DIA("coalesce(last_activity_time, date_modify)")} AS varchar), ` +
-        `CAST(date_diff('day', coalesce(last_activity_time, date_modify), now()) AS varchar), coalesce(stage_id,''), ` +
-        `CAST(date_diff('minute', coalesce(moved_time, date_modify), now()) AS varchar) ` +
-        `FROM nekt_service.fact_deals WHERE CAST(assigned_by_id AS varchar) IN (${ids.map((x) => `'${x}'`).join(",")}) AND tipo_lead IN ${TIPOS} ` +
-        `AND (stage_semantic_id = 'P' OR ${DIA("date_create")} BETWEEN date '${de}' AND date '${ate}' OR ${DIA("closedate")} BETWEEN date '${de}' AND date '${ate}') ` +
-        `ORDER BY date_create DESC LIMIT ${LIMITE}`,
-    );
-    return json({ rows: r.linhas, mais: r.linhas.length >= LIMITE });
+    return json(await busca);
   } catch {
     return json({ erro: "indisponível" }, 502);
   }
+}
+
+type Resultado = { rows: string[][]; mais: boolean };
+const GUARDADO = new Map<string, { em: number; dado?: Resultado; voo?: Promise<Resultado> }>();
+const VALIDADE_MS = 3 * 60_000;
+
+/** Uma única consulta à Nekt, guardada por 3 minutos (e compartilhada se várias pessoas pedirem juntas). */
+function buscar(chave: string, nome: string, equipe: string, de: string, ate: string): Promise<Resultado> {
+  const g = GUARDADO.get(chave);
+  if (g?.dado && Date.now() - g.em < VALIDADE_MS) return Promise.resolve(g.dado);
+  if (g?.voo) return g.voo;
+  if (GUARDADO.size > 300) GUARDADO.clear();
+  const q = (x: string) => x.replace(/'/g, "''");
+  const voo = nektSql(
+    `SELECT CAST(deal_id AS varchar), substr(coalesce(title,''), 1, 80), coalesce(stage_description,''), stage_semantic_id, CAST(${FUNIL} AS varchar), ` +
+      `CAST(${DIA("date_create")} AS varchar), CAST(${DIA("coalesce(last_activity_time, date_modify)")} AS varchar), ` +
+      `CAST(date_diff('day', coalesce(last_activity_time, date_modify), now()) AS varchar), coalesce(stage_id,''), ` +
+      `CAST(date_diff('minute', coalesce(moved_time, date_modify), now()) AS varchar) ` +
+      `FROM nekt_service.fact_deals WHERE CAST(assigned_by_id AS varchar) IN (SELECT DISTINCT CAST(user_id AS varchar) FROM nekt_service.dim_corretores_equipe WHERE corretor_nome = '${q(nome)}' AND equipe_nome = '${q(equipe)}' AND CAST(active AS varchar) = 'true') AND tipo_lead IN ${TIPOS} ` +
+      `AND (stage_semantic_id = 'P' OR ${DIA("date_create")} BETWEEN date '${de}' AND date '${ate}' OR ${DIA("closedate")} BETWEEN date '${de}' AND date '${ate}') ` +
+      `ORDER BY date_create DESC LIMIT ${LIMITE}`,
+  ).then(
+    (r) => {
+      const dado = { rows: r.linhas, mais: r.linhas.length >= LIMITE };
+      GUARDADO.set(chave, { em: Date.now(), dado });
+      return dado;
+    },
+    (e) => {
+      GUARDADO.delete(chave);
+      throw e;
+    },
+  );
+  GUARDADO.set(chave, { em: Date.now(), voo });
+  return voo;
 }

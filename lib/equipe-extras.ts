@@ -159,6 +159,7 @@ function telaAtend(){
         h+='<tr class="atc"><td class="name"><button class="atl" data-adet="'+x.c.id+'" data-akind="'+kd+'" aria-label="Abrir o detalhe de '+f(x.c.nome)+'">'+f(x.c.nome)+"</button></td>"+cels(x.m)+"</tr>"})}});
   h+="</tbody>"+(eq.length?'<tfoot><tr><td>Total</td><td class="num r">'+k(tot.at||0)+'</td><td class="num r">'+k(tot.ea||0)+'</td><td class="num r">'+k(tot.ep||0)+'</td><td class="num r">'+atPri(tot)+'</td><td class="num r">'+k(tot.g||0)+'</td><td class="num r">'+k(tot.l||0)+'</td><td class="num r">'+atCell(tot)+"</td></tr></tfoot>":"")+"</table></div>";
   h+='</div>';
+  if(!window.__atHov){window.__atHov=1;document.addEventListener("pointerover",function(e){var b=e.target.closest&&e.target.closest("[data-adet]");if(!b||!window.__atq)return;var id=b.getAttribute("data-adet"),c=A.filter(function(x){return x.id===id})[0];if(c)negCarga(c,window.__atq.faixa(i.per))},!0)}
   if(!window.__atOn){window.__atOn=1;document.addEventListener("click",function(e){
     var b=e.target.closest&&e.target.closest("[data-afunil],[data-asort],[data-aeq],[data-aall],[data-adet]");if(!b)return;
     var d=b.dataset;e.stopPropagation();
