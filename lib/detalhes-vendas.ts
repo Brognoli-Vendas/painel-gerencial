@@ -9,10 +9,14 @@ import "server-only";
  */
 const REC = 'emp:v[5]||"(Em branco)",f:v[7],g:v[6]}';
 const FIM_FE = 'R+"</div></div>"}function Be(){';
-// Lista "Corretor" dos filtros: a mesma pessoa aparece uma vez por equipe (gerente, diretor, agenciador); mostra uma só vez, pelo id.
+// Filtro "Corretor": o esboço cria um registro por pessoa e equipe, então a mesma pessoa (ou o Agenciador Brognoli, que está em várias equipes)
+// aparecia repetida. A lista mostra cada nome uma vez e, ao escolher, o filtro vale para todos os registros desse nome.
 const LISTA_COR = '[["todos","Todos os corretores"]].concat(n.map(function(d){return[d.id,d.nome]}))';
 const LISTA_COR_UNICA =
-  '[["todos","Todos os corretores"]].concat(n.filter(function(d,x,r){return r.findIndex(function(y){return y.id===d.id})===x}).map(function(d){return[d.id,d.nome]}))';
+  '[["todos","Todos os corretores"]].concat(n.filter(function(d,x,r){var k=String(d.nome).trim().toLowerCase();return r.findIndex(function(y){return String(y.nome).trim().toLowerCase()===k})===x}).map(function(d){return[d.id,d.nome]}))';
+const FILTRO_COR = "t=a.filter(function(s){return s.id===i.cor})";
+const FILTRO_COR_NOME =
+  't=a.filter(function(s){var c=A.filter(function(z){return z.id===i.cor})[0];return!!c&&String(s.nome).trim().toLowerCase()===String(c.nome).trim().toLowerCase()})';
 
 const JS = String.raw`
 function vendasDetalhe(s){
@@ -62,7 +66,9 @@ export function aplicarDetalhesVendas(html: string): string {
   if (html.split(REC).length !== 2) throw new Error("ponto de troca do detalhe das vendas (registro) não encontrado");
   if (html.split(FIM_FE).length !== 2) throw new Error("ponto de troca do detalhe das vendas (Fechamentos) não encontrado");
   if (html.split(LISTA_COR).length !== 2) throw new Error("ponto de troca da lista de corretores não encontrado");
+  if (html.split(FILTRO_COR).length !== 2) throw new Error("ponto de troca do filtro de corretor não encontrado");
   let s = html.split(LISTA_COR).join(LISTA_COR_UNICA);
+  s = s.split(FILTRO_COR).join(FILTRO_COR_NOME);
   s = s.split(REC).join('emp:v[5]||"(Em branco)",f:v[7],g:v[6],r:v}');
   s = s.split(FIM_FE).join('R+"</div></div>"+vendasDetalhe(s)}' + JS + "function Be(){");
   const fim = "</body></html>";
