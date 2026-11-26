@@ -34,6 +34,11 @@ const TROCAS: Troca[] = [
   ['le("equipe-"+i.kind)', 'le(i.volta||"equipe-"+i.kind)'],
   ["if(t.det)return i.det=t.det,", "if(t.det)return i.volta=null,i.det=t.det,"],
   ["Voltar para '+t.t+'", "Voltar para '+(i.volta?\"Atendimentos\":t.t)+'", 2],
+  // --- tela do corretor: todos os negócios, por funil e situação, com link do card no Bitrix ---
+  [
+    `h+='<div class="sechead"><h2 class="sec">Negócios com alerta</h2><p class="note">Aguardando atendimento, sem atuação do corretor ou parados há 15 dias ou mais. Mostra os mais antigos de cada tipo.</p></div><div class="tw"><table style="min-width:640px"><thead><tr><th>Card</th><th style="text-align:left">'+t.cli+'</th><th style="text-align:left">Alerta</th></tr></thead><tbody>'+(al.length?al.map(function(q){return'<tr><td class="num" style="text-align:left">#'+q.id+'</td><td style="text-align:left">'+f(q.cli)+'</td><td style="text-align:left"><span class="tag" style="background:#F6E0DA;color:#8C3420">'+q.al+'</span></td></tr>'}).join(""):'<tr><td colspan="3" class="empty">Nenhum negócio com alerta.</td></tr>')+'</tbody></table></div></div>';`,
+    "h+=listaNeg(e,a,r);",
+  ],
   // --- paginação da lista de corretores (Desempenho) ---
   ["function $e(){var e=me(),", "@@FUNCS@@function $e(){var e=me(),"],
   ["o.forEach(function(g,b){var m=g.m,q=g.c;c+='<tr class=\"click\" data-cor=", "pagEq(o).forEach(function(g,b){var m=g.m,q=g.c;c+='<tr class=\"click\" data-cor="],
@@ -57,6 +62,55 @@ function pagerEq(){
   if(q.pages<=1)return"";
   var a=q.i+1,b=Math.min(q.n,q.i+q.pg);
   return'<nav class="pgn" aria-label="Páginas da lista de corretores"><span class="k">'+k(a)+"–"+k(b)+" de "+k(q.n)+' corretores</span><div><button class="btn ghost" data-pgq="'+(i.pp-1)+'"'+(i.pp?"":" disabled")+'>Anterior</button><span class="vn">Página '+(i.pp+1)+" de "+q.pages+'</span><button class="btn ghost" data-pgq="'+(i.pp+1)+'"'+(i.pp<q.pages-1?"":" disabled")+">Próxima</button></div></nav>"}
+
+function negCarga(e,r){
+  var key=e.nome+"|"+e.team+"|"+r[0]+"|"+r[1],C=window.__neg||(window.__neg={});
+  if(C[key])return C[key];
+  C[key]={st:"load"};
+  fetch("/api/atendimentos?"+new URLSearchParams({n:e.nome,t:e.team,de:r[0],ate:r[1]}),{credentials:"same-origin"})
+    .then(function(x){if(!x.ok)throw 0;return x.json()})
+    .then(function(j){C[key]={st:"ok",rows:j.rows||[],mais:!!j.mais}})
+    .catch(function(){C[key]={st:"err"}})
+    .then(function(){if(i.det===e.id)E()});
+  return C[key]}
+function negSit(x){
+  if(x[3]==="S")return{k:"ganho",t:"Ganho"};
+  if(x[3]==="F")return{k:"perdido",t:"Perdido"};
+  var m=+x[9]||0,dias=+x[7]||0;
+  if(/:NEW$/.test(x[8]))return{k:"alerta",t:"Aguardando 1º atendimento há "+window.__atq.dur(m)};
+  if(/^(C4:PREPARATION|C7:PREPARATION|C3:5)$/.test(x[8]))return{k:"alerta",t:"Sem atuação do corretor há "+window.__atq.dur(m)};
+  if(x[2]!=="Retorno posterior 45-90 dias"&&dias>=15)return{k:"alerta",t:dias+" dias sem atualização"};
+  return{k:"aberto",t:"Em andamento"}}
+function negData(t){return t&&t.length>=10?t.slice(8,10)+"/"+t.slice(5,7)+"/"+t.slice(0,4):"—"}
+function listaNeg(e,a,r){
+  var d=negCarga(e,r),ter=e.vert==="Terceiros",seg=ter?(i.nseg||"todos"):"todos",st=i.nst||"todos";
+  var h='<div class="sechead"><h2 class="sec">Negócios do corretor</h2></div>';
+  if(d.st==="load")return h+'<p class="empty">Carregando os negócios…</p></div>';
+  if(d.st==="err")return h+'<p class="empty">Não foi possível carregar os negócios agora. <button class="btn ghost sm" data-nretry="1">Tentar de novo</button></p></div>';
+  var L=d.rows.filter(function(x){return seg==="todos"||(seg==="comprador"?x[4]==="0":x[4]==="1")}).map(function(x){return{x:x,s:negSit(x)}});
+  var n={todos:L.length,aberto:0,alerta:0,ganho:0,perdido:0};
+  L.forEach(function(y){if(y.s.k==="alerta"){n.alerta++;n.aberto++}else n[y.s.k]++});
+  var V=L.filter(function(y){return st==="todos"||(st==="aberto"?(y.s.k==="aberto"||y.s.k==="alerta"):y.s.k===st)});
+  var PG=50,pgs=Math.max(1,Math.ceil(V.length/PG));if(!(i.npg>=0))i.npg=0;if(i.npg>pgs-1)i.npg=pgs-1;
+  var ini=i.npg*PG;
+  if(ter){h+='<div class="filters atfunil" role="group" aria-label="Funil"><div class="f nc"><span class="fl" id="nsg">Funil</span><div class="segc" role="group" aria-labelledby="nsg">'+[["todos","Todos"],["comprador","Comprador"],["proprietarios","Proprietário"]].map(function(z){return'<button data-nseg="'+z[0]+'" aria-pressed="'+(seg===z[0])+'">'+z[1]+"</button>"}).join("")+"</div></div></div>"}
+  h+='<div class="tabs" role="group" aria-label="Situação dos negócios">'+[["todos","Todos"],["aberto","Em andamento"],["alerta","Com alerta"],["ganho","Ganhos"],["perdido","Perdidos"]].map(function(z){return'<button data-nst="'+z[0]+'" aria-pressed="'+(st===z[0])+'" class="'+(st===z[0]?"on":"")+'">'+z[1]+" <span class=\"k\">"+k(n[z[0]])+"</span></button>"}).join("")+"</div>";
+  h+='<div class="tw"><table class="nt"><thead><tr><th>Card</th><th>Cliente</th>'+(ter&&seg==="todos"?"<th>Funil</th>":"")+'<th>Etapa</th><th>Situação</th><th>Criado em</th><th>Última atualização</th></tr></thead><tbody>';
+  if(!V.length)h+='<tr><td colspan="7" class="empty">Nenhum negócio neste filtro.</td></tr>';
+  V.slice(ini,ini+PG).forEach(function(y){var x=y.x,s=y.s;
+    h+='<tr><td class="num"><a class="nl" href="https://brognolivendas.bitrix24.com.br/crm/deal/details/'+encodeURIComponent(x[0])+'/" target="_blank" rel="noopener noreferrer" aria-label="Abrir o card '+f(x[0])+' no Bitrix">'+f(x[0])+'</a></td><td>'+f(x[1]||"(sem título)")+"</td>"+(ter&&seg==="todos"?"<td>"+(x[4]==="1"?"Proprietário":"Comprador")+"</td>":"")+"<td>"+f(x[2])+'</td><td>'+(s.k==="alerta"?'<span class="tag" style="background:#F6E0DA;color:#8C3420">'+f(s.t)+"</span>":s.k==="ganho"?'<span class="tag on">'+s.t+"</span>":s.k==="perdido"?'<span class="tag">'+s.t+"</span>":s.t)+'</td><td class="num">'+negData(x[5])+'</td><td class="num">'+negData(x[6])+"</td></tr>"});
+  h+="</tbody></table></div>";
+  if(pgs>1){var a1=ini+1,b1=Math.min(V.length,ini+PG);h+='<nav class="pgn" aria-label="Páginas dos negócios"><span class="k">'+k(a1)+"–"+k(b1)+" de "+k(V.length)+'</span><div><button class="btn ghost" data-npg="'+(i.npg-1)+'"'+(i.npg?"":" disabled")+'>Anterior</button><span class="vn">Página '+(i.npg+1)+" de "+pgs+'</span><button class="btn ghost" data-npg="'+(i.npg+1)+'"'+(i.npg<pgs-1?"":" disabled")+">Próxima</button></div></nav>"}
+  if(d.mais)h+='<p class="note" style="margin-top:10px">Mostrando os 900 negócios mais recentes.</p>';
+  if(!window.__negOn){window.__negOn=1;document.addEventListener("click",function(ev){
+    var b=ev.target.closest&&ev.target.closest("[data-nseg],[data-nst],[data-npg],[data-nretry]");if(!b||b.disabled)return;
+    var q=b.dataset;ev.stopPropagation();
+    if(q.nseg){i.nseg=q.nseg;i.npg=0}
+    else if(q.nst){i.nst=q.nst;i.npg=0}
+    else if(q.npg!==void 0){i.npg=+q.npg}
+    else if(q.nretry){window.__neg={}}
+    E()},!0)}
+  return h+"</div>"}
 function atKinds(c){var f=i.afunil||"todos",a=c.vert==="Terceiros"?[0,1]:[2];
   if(f==="comprador")return a.filter(function(x){return x===0});
   if(f==="proprietarios")return a.filter(function(x){return x===1});
@@ -104,7 +158,7 @@ function telaAtend(){
       e.cors.forEach(function(x){var kd=(i.afunil&&i.afunil!=="todos")?i.afunil:(x.c.vert==="Terceiros"?"comprador":"lancamentos");
         h+='<tr class="atc"><td class="name"><button class="atl" data-adet="'+x.c.id+'" data-akind="'+kd+'" aria-label="Abrir o detalhe de '+f(x.c.nome)+'">'+f(x.c.nome)+"</button></td>"+cels(x.m)+"</tr>"})}});
   h+="</tbody>"+(eq.length?'<tfoot><tr><td>Total</td><td class="num r">'+k(tot.at||0)+'</td><td class="num r">'+k(tot.ea||0)+'</td><td class="num r">'+k(tot.ep||0)+'</td><td class="num r">'+atPri(tot)+'</td><td class="num r">'+k(tot.g||0)+'</td><td class="num r">'+k(tot.l||0)+'</td><td class="num r">'+atCell(tot)+"</td></tr></tfoot>":"")+"</table></div>";
-  h+='<p class="note" style="margin-top:10px">Negócios no período, ganhos e perdidos seguem o período escolhido. Em atendimento, em proposta e alertas mostram a situação de agora. 1º atendimento: minutos úteis até o corretor atender (prazo de 20 min para fonte quente, 1 dia para fonte fria). Clique na equipe para detalhar por corretor e no nome do corretor para abrir o detalhe dele.</p></div>';
+  h+='</div>';
   if(!window.__atOn){window.__atOn=1;document.addEventListener("click",function(e){
     var b=e.target.closest&&e.target.closest("[data-afunil],[data-asort],[data-aeq],[data-aall],[data-adet]");if(!b)return;
     var d=b.dataset;e.stopPropagation();
@@ -112,7 +166,7 @@ function telaAtend(){
     if(d.asort){i.asort=i.asort&&i.asort.c===d.asort?{c:d.asort,d:-i.asort.d}:{c:d.asort,d:d.asort==="nome"?1:-1};return E()}
     if(d.aeq){i.aall=!1;i.aex=i.aex||{};i.aex[d.aeq]=!i.aex[d.aeq];E();var z=document.querySelector('[data-aeq="'+d.aeq+'"]');if(z&&z.focus)z.focus();return}
     if(d.aall){var ex=!(i.aall||!1);if(i.aall){i.aall=!1;i.aex={}}else{i.aall=!0}return E()}
-    if(d.adet){i.det=d.adet;i.kind=d.akind||"comprador";i.tab="todos";i.editMetas=null;i.volta="equipe-atendimentos";return le("equipe-detalhe")}
+    if(d.adet){i.det=d.adet;i.kind=d.akind||"comprador";i.tab="todos";i.editMetas=null;i.volta="equipe-atendimentos";i.nseg="todos";i.nst="todos";i.npg=0;return le("equipe-detalhe")}
   },!0)}
   return h}
 `;
@@ -136,6 +190,10 @@ const CSS = `
 .att .atl{border:0;background:none;padding:0;font:inherit;color:var(--g900);text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .att .atl:hover,.att .atl:focus-visible{text-decoration-color:var(--y)}
 .att tfoot td{font-weight:600;border-top:2px solid var(--line);background:#fafaf7}
+.nt{width:100%;min-width:860px;border-collapse:collapse}
+.nt th,.nt td{text-align:left;vertical-align:top}
+.nt .nl{color:var(--g900);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.nt .nl:hover,.nt .nl:focus-visible{text-decoration-color:var(--y)}
 .atfunil{margin-top:-4px}
 @media (max-width:640px){.pgn>div{width:100%;justify-content:space-between}.att tr.atc td.name{padding-left:24px}}
 `;
