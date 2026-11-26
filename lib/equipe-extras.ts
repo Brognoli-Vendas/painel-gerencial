@@ -29,7 +29,7 @@ const TROCAS: Troca[] = [
     '"equipe-desempenho","equipe-reativacao","operacao-roletas","operacao-checkin","equipe-comprador"',
     '"equipe-desempenho","equipe-atendimentos","equipe-reativacao","operacao-roletas","operacao-checkin","equipe-comprador"',
   ],
-  ['"equipe-desempenho":$e,', '"equipe-desempenho":$e,"equipe-atendimentos":telaAtend,'],
+  ['"equipe-desempenho":$e,', '"equipe-desempenho":function(){return S().nivel==="Diretoria"?telaDesDir():$e()},"equipe-atendimentos":telaAtend,'],
   // --- voltar da tela do corretor para a aba Atendimentos ---
   ['le("equipe-"+i.kind)', 'le(i.volta||"equipe-"+i.kind)'],
   ["if(t.det)return i.det=t.det,", "if(t.det)return i.volta=null,i.det=t.det,"],
@@ -189,6 +189,39 @@ function telaAtend(){
     if(d.aeq){i.aall=!1;i.aex=i.aex||{};i.aex[d.aeq]=!i.aex[d.aeq];E();var z=document.querySelector('[data-aeq="'+d.aeq+'"]');if(z&&z.focus)z.focus();return}
     if(d.aall){var ex=!(i.aall||!1);if(i.aall){i.aall=!1;i.aex={}}else{i.aall=!0}return E()}
     if(d.adet){i.det=d.adet;i.kind=d.akind||"comprador";i.tab="todos";i.editMetas=null;i.volta="equipe-atendimentos";i.voltaL="Atendimentos";i.nseg="todos";i.nst="todos";i.npg=0;return le("equipe-detalhe")}
+  },!0)}
+  return h}
+
+function telaDesDir(){
+  var a=We(),cols=Qe(a[0],a[1]).filter(function(g){return!i.hc[g[0]]}),t6=a[0];
+  var cs=me().filter(function(c){return!c.g}),so=i.sort||(i.sort={c:"nome",d:1});
+  var eq=te().map(function(t){var cors=cs.filter(function(c){return c.team===t.id}).map(function(c){return{c:c,m:Y(c,i.per)}});return{t:t,cors:cors,m:F(cors.map(function(x){return x.c}),i.per)}});
+  if(i.cor!=="todos")eq=eq.filter(function(e){return e.cors.length});
+  function nm(x){return x.c?x.c.nome:x.t.nome}
+  function cmpN(x,y){var p=nm(x),q=nm(y);return(p<q?-1:p>q?1:0)*so.d}
+  function cmpM(x,y){var p=x.m[so.c]||0,q=y.m[so.c]||0;return(p>q?1:p<q?-1:0)*so.d}
+  var cmp=so.c==="nome"?cmpN:cmpM;eq.sort(cmp);eq.forEach(function(e){e.cors.sort(cmp)});
+  var d=F(cs,i.per),l=F(cs,i.per,1);
+  if(!i.dex)i.dex={};
+  var h='<div class="page wrap">'+G("Desempenho por corretor",_()+" | vendas, faturamento, leads e agenciamentos reais por equipe",!1)+U("equipe-desempenho");
+  h+='<div class="strip">'+(t6?'<div><div class="k">Agenciamentos realizados</div><div class="v num">'+k(d.ar)+'</div><div class="d">'+T(d.ar,l.ar)+'</div></div><div><div class="k">Agenciamentos vendidos</div><div class="v num">'+k(d.av)+'</div><div class="d">'+T(d.av,l.av)+"</div></div>":"")+(window.__hasProp?'<div><div class="k">Propostas geradas</div><div class="v num">'+k(d.prop)+'</div><div class="d">'+T(d.prop,l.prop)+'</div></div>':"")+'<div><div class="k">Vendas</div><div class="v num">'+k(d.vendas)+'</div><div class="d">'+T(d.vendas,l.vendas)+'</div></div><div><div class="k">Faturamento</div><div class="v num">'+P(d.fat)+'</div><div class="d">'+T(d.fat,l.fat)+'</div></div><div><div class="k">Taxa de conversão</div><div class="v num">'+j(d.conv)+'</div><div class="d">'+T(d.conv,l.conv)+'</div></div><div><div class="k">Clientes perdidos</div><div class="v num">'+k(d.perd)+'</div><div class="d">'+T(d.perd,l.perd,1)+"</div></div></div>";
+  function th(g,tx){var on=so.c===g;return"<th"+(on?' aria-sort="'+(so.d>0?"ascending":"descending")+'"':"")+'><button data-sort="'+g+'">'+tx+(on?so.d>0?" ▲":" ▼":"")+"</button></th>"}
+  var todas=eq.length&&eq.every(function(e){return i.dall||i.dex[e.t.id]});
+  h+='<div class="sechead"><h2 class="sec">Por equipe</h2><div class="tacts"><button class="btn ghost" data-dall="1">'+(todas?"Recolher todas":"Detalhar todas por corretor")+'</button><div class="colwrap"><button class="btn ghost" data-a="cols" aria-haspopup="true" aria-expanded="'+!!i.colsOpen+'">Colunas</button>'+(i.colsOpen?st():"")+'</div>'+(window.__okAcao("act-csv")?'<button class="btn ghost" data-a="csv">Exportar CSV</button>':"")+'</div></div>';
+  h+='<div class="tw"><table class="att"><thead><tr>'+th("nome","Equipe")+cols.map(function(g){return th(g[0],g[1])}).join("")+"</tr></thead><tbody>";
+  if(!eq.length)h+='<tr><td colspan="'+(cols.length+1)+'" class="empty">Nenhuma equipe no filtro atual. Ajuste a equipe ou o período.</td></tr>';
+  function cels(q,m){return cols.map(function(g){return'<td class="num r">'+nt(q,m,g[0])+"</td>"}).join("")}
+  eq.forEach(function(e){
+    var ab=!!(i.dall||i.dex[e.t.id]),n=e.cors.length;
+    h+='<tr class="atq"><td class="name"><button class="atb" data-dq="'+e.t.id+'" aria-expanded="'+ab+'" aria-label="'+(ab?"Recolher":"Detalhar")+" corretores da equipe "+f(e.t.nome)+'"><span class="car" aria-hidden="true">'+(ab?"▾":"▸")+'</span><span>'+f(e.t.nome)+'<span class="k vs">'+f(e.t.vert)+" · "+n+(n===1?" corretor":" corretores")+"</span></span></button></td>"+cels({vert:e.t.vert},e.m)+"</tr>";
+    if(ab){if(!n)h+='<tr class="atc"><td colspan="'+(cols.length+1)+'" class="empty">Nenhum corretor nesta equipe.</td></tr>';
+      e.cors.forEach(function(x){h+='<tr class="atc click" data-cor="'+x.c.id+'" tabindex="0" role="button" aria-label="Abrir resumo de '+f(x.c.nome)+'"><td class="name"><span>'+f(x.c.nome)+"</span></td>"+cels(x.c,x.m)+"</tr>"})}});
+  h+="</tbody>"+(eq.length?"<tfoot><tr><td>Total</td>"+cols.map(function(g){var b=g[0];return'<td class="num r">'+(b==="fat"?P(d.fat):b==="conv"?j(d.conv):k(d[b]))+"</td>"}).join("")+"</tr></tfoot>":"")+'</table></div><p class="note" style="margin-top:10px">Abra uma equipe para ver os corretores; clique em um corretor para abrir o resumo individual.</p></div>';
+  if(!window.__dqOn){window.__dqOn=1;document.addEventListener("click",function(e){
+    var b=e.target.closest&&e.target.closest("[data-dq],[data-dall]");if(!b)return;
+    var d=b.dataset;e.stopPropagation();
+    if(d.dq){i.dall=!1;i.dex=i.dex||{};i.dex[d.dq]=!i.dex[d.dq];E();var z=document.querySelector('[data-dq="'+d.dq+'"]');if(z&&z.focus)z.focus();return}
+    if(d.dall){if(i.dall){i.dall=!1;i.dex={}}else{i.dall=!0}return E()}
   },!0)}
   return h}
 `;
