@@ -1,8 +1,10 @@
 import { exigirSessao } from "@/lib/sessao";
 import { carregarDados } from "@/lib/dados";
 import { nektSql } from "@/lib/nekt";
+import { aquecerNegocios, negociosDaCopia } from "@/lib/negocios";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const TIPOS = "('Comprador Terceiros','Proprietário','Comprador Lançamentos','Comprador Preço de Custo')";
 const FUNIL = "CASE tipo_lead WHEN 'Comprador Terceiros' THEN 0 WHEN 'Proprietário' THEN 1 ELSE 2 END";
@@ -19,6 +21,10 @@ export async function GET(req: Request) {
   const { perfil, permissoes } = await exigirSessao();
   if (permissoes["equipe-desempenho"] !== true) return json({ erro: "sem permissão" }, 403);
   const u = new URL(req.url).searchParams;
+  if (u.get("aquecer")) {
+    aquecerNegocios(); // deixa a cópia dos negócios pronta enquanto a pessoa navega
+    return new Response(null, { status: 204 });
+  }
   const nome = (u.get("n") ?? "").slice(0, 120);
   const equipe = (u.get("t") ?? "").slice(0, 40);
   const de = u.get("de") ?? "";
@@ -26,10 +32,14 @@ export async function GET(req: Request) {
   const dt = /^\d{4}-\d{2}-\d{2}$/;
   if (!nome || !equipe || !dt.test(de) || !dt.test(ate)) return json({ erro: "pedido inválido" }, 400);
 
-  // Escopo e consulta andam juntos; a resposta só sai se o corretor estiver no escopo da pessoa.
+  // Escopo e busca andam juntos; a resposta só sai se o corretor estiver no escopo da pessoa.
   const chave = [nome, equipe, de, ate].join("|");
   const escopo = carregarDados(perfil).then((d) => d.cors.some((c) => c.nome === nome && c.team === equipe && !c.g));
-  const busca = buscar(chave, nome, equipe, de, ate);
+  const busca = negociosDaCopia(nome, equipe, de, ate).then((pre) => {
+    if (pre) return pre;
+    aquecerNegocios(); // sem cópia utilizável: busca direto na Nekt desta vez e prepara a cópia para as próximas
+    return buscar(chave, nome, equipe, de, ate);
+  });
   busca.catch(() => {});
   if (!(await escopo)) return json({ erro: "corretor fora do seu escopo" }, 403);
   try {
