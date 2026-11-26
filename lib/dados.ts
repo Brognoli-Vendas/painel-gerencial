@@ -176,14 +176,14 @@ async function buscarEquipe(): Promise<Equipe> {
     ),
     nektSql(
       `WITH b AS (SELECT CAST(assigned_by_id AS varchar) u, ${FUNIL} k, stage_description e, count(*) n, ` +
-        `count_if(stage_description <> 'Retorno posterior 45-90 dias' AND date_diff('day', coalesce(last_activity_time, date_modify), now()) >= 15) p ` +
+        `count_if(stage_description <> 'Retorno posterior 45-90 dias' AND date_diff('day', date_modify, now()) >= 15) p ` +
         `FROM nekt_service.fact_deals WHERE stage_semantic_id = 'P' AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
         `SELECT u, k, array_join(array_agg(concat(e, '|', CAST(n AS varchar), '|', CAST(p AS varchar))), ';') FROM b GROUP BY 1,2`,
     ),
     nektSql(
       `SELECT CAST(deal_id AS varchar), substr(title, 1, 60), u, CAST(k AS varchar), CAST(dias AS varchar) FROM (` +
-        `SELECT deal_id, title, CAST(assigned_by_id AS varchar) u, ${FUNIL} k, date_diff('day', coalesce(last_activity_time, date_modify), now()) dias, ` +
-        `row_number() OVER (PARTITION BY assigned_by_id, ${FUNIL} ORDER BY coalesce(last_activity_time, date_modify) ASC) rn ` +
+        `SELECT deal_id, title, CAST(assigned_by_id AS varchar) u, ${FUNIL} k, date_diff('day', date_modify, now()) dias, ` +
+        `row_number() OVER (PARTITION BY assigned_by_id, ${FUNIL} ORDER BY date_modify ASC) rn ` +
         `FROM nekt_service.fact_deals WHERE stage_semantic_id = 'P' AND stage_description <> 'Retorno posterior 45-90 dias' AND tipo_lead IN ${TIPOS}) ` +
         `WHERE dias >= 15 AND rn <= 2 ORDER BY dias DESC LIMIT 990`,
     ),
