@@ -13,7 +13,29 @@ const TROCAS: Troca[] = [
   // --- exporta os cálculos reais já carregados no navegador (só leitura) ---
   [
     "Y=function(c,pk,mult){var r=faixa(pk,mult)",
-    "window.__atq={sum:q_sum,NEG:q_NEG,FCH:q_FCH,AGU:q_AGU,est:q_est,pri:q_pri,priM:q_priM,priP:q_priP,faixa:faixa,dur:q_dur};Y=function(c,pk,mult){var r=faixa(pk,mult)",
+    "window.__atq={sum:q_sum,NEG:q_NEG,FCH:q_FCH,AGU:q_AGU,est:q_est,pri:q_pri,priM:q_priM,priP:q_priP,faixa:faixa,dur:q_dur};" +
+      // Totais que não dependem do período: imóveis em pauta agora (estado atual), vendas e faturamento acumulados (tudo que o painel carrega, desde jan/2025).
+      'Y=function(c,pk,mult){var o=Y0(c,pk,mult),w=(typeof q_PAU!=="undefined"&&q_PAU[c.i])||null,v=porCor[c.i]||[];o.tpa=w?+w[1]||0:0;o.tvd=v.length;o.tfa=0;v.forEach(function(x){o.tfa+=x[7]});return o};' +
+      "var Y0=function(c,pk,mult){var r=faixa(pk,mult)",
+  ],
+  // --- colunas e cartões de totais acumulados (não mudam com o período) ---
+  [
+    "var s={lc:0,lp:0,ll:0,tot:0,vendas:0,prop:0,ar:0,av:0,perd:0,fat:0,vgv:0};return e.forEach(function(n){var o=Y(n,a,t)",
+    "var s={lc:0,lp:0,ll:0,tot:0,vendas:0,prop:0,ar:0,av:0,perd:0,fat:0,vgv:0,tpa:0,tvd:0,tfa:0};return e.forEach(function(n){var o=Y(n,a,t)",
+  ],
+  [
+    '(b==="fat"?P(d.fat):b==="conv"?j(d.conv):k(d[b]))',
+    '(b==="fat"||b==="tfa"?P(d[b]):b==="conv"?j(d.conv):k(d[b]))',
+  ],
+  ['["perd","Clientes perdidos"]]', '["perd","Clientes perdidos"],["tpa","Imóveis em pauta (agora)"],["tvd","Vendas (acumulado)"],["tfa","Faturamento (acumulado)"]]'],
+  ['!((t[0]==="ar"||t[0]==="av")&&!e)', '!((t[0]==="ar"||t[0]==="av"||t[0]==="tpa")&&!e)'],
+  [
+    'return t==="ar"?n?s?a.ar:k(a.ar):d:',
+    'return t==="tpa"?n?s?a.tpa:k(a.tpa):d:t==="tvd"?s?a.tvd:k(a.tvd):t==="tfa"?s?a.tfa:P(a.tfa):t==="ar"?n?s?a.ar:k(a.ar):d:',
+  ],
+  [
+    '+T(d.perd,l.perd,1)+"</div></div></div>";function u(g,b){var m=i.sort.c===g[0]',
+    '+T(d.perd,l.perd,1)+"</div></div></div>"+totStrip(d,t);function u(g,b){var m=i.sort.c===g[0]',
   ],
   // --- permissão: a aba Atendimentos vale para quem vê o Desempenho ---
   [
@@ -60,6 +82,9 @@ const TROCAS: Troca[] = [
 ];
 
 const JS = String.raw`
+function totStrip(d,t6){
+  var fx='<div class="d"><span class="flat">';
+  return'<div class="strip tot">'+(t6?'<div><div class="k">Imóveis em pauta (agora)</div><div class="v num">'+k(d.tpa)+'</div>'+fx+'Situação atual</span></div></div>':"")+'<div><div class="k">Vendas (acumulado)</div><div class="v num">'+k(d.tvd)+'</div>'+fx+'Desde jan/2025</span></div></div><div><div class="k">Faturamento (acumulado)</div><div class="v num">'+P(d.tfa)+'</div>'+fx+'Desde jan/2025</span></div></div></div><p class="note" style="margin:-6px 0 14px">Totais acumulados e situação atual: não mudam com o período escolhido.</p>'}
 function pagEq(o){
   var PG=50,key=JSON.stringify([i.per,i.vert,i.eq,i.cor,i.sort,i.cf,o.length]);
   if(i.pk!==key){i.pk=key;i.pp=0}
@@ -204,7 +229,7 @@ function telaDesDir(){
   var d=F(cs,i.per),l=F(cs,i.per,1);
   if(!i.dex)i.dex={};
   var h='<div class="page wrap">'+G("Desempenho por corretor",_()+" | vendas, faturamento, leads e agenciamentos reais por equipe",!1)+U("equipe-desempenho");
-  h+='<div class="strip">'+(t6?'<div><div class="k">Agenciamentos realizados</div><div class="v num">'+k(d.ar)+'</div><div class="d">'+T(d.ar,l.ar)+'</div></div><div><div class="k">Agenciamentos vendidos</div><div class="v num">'+k(d.av)+'</div><div class="d">'+T(d.av,l.av)+"</div></div>":"")+(window.__hasProp?'<div><div class="k">Propostas geradas</div><div class="v num">'+k(d.prop)+'</div><div class="d">'+T(d.prop,l.prop)+'</div></div>':"")+'<div><div class="k">Vendas</div><div class="v num">'+k(d.vendas)+'</div><div class="d">'+T(d.vendas,l.vendas)+'</div></div><div><div class="k">Faturamento</div><div class="v num">'+P(d.fat)+'</div><div class="d">'+T(d.fat,l.fat)+'</div></div><div><div class="k">Taxa de conversão</div><div class="v num">'+j(d.conv)+'</div><div class="d">'+T(d.conv,l.conv)+'</div></div><div><div class="k">Clientes perdidos</div><div class="v num">'+k(d.perd)+'</div><div class="d">'+T(d.perd,l.perd,1)+"</div></div></div>";
+  h+='<div class="strip">'+(t6?'<div><div class="k">Agenciamentos realizados</div><div class="v num">'+k(d.ar)+'</div><div class="d">'+T(d.ar,l.ar)+'</div></div><div><div class="k">Agenciamentos vendidos</div><div class="v num">'+k(d.av)+'</div><div class="d">'+T(d.av,l.av)+"</div></div>":"")+(window.__hasProp?'<div><div class="k">Propostas geradas</div><div class="v num">'+k(d.prop)+'</div><div class="d">'+T(d.prop,l.prop)+'</div></div>':"")+'<div><div class="k">Vendas</div><div class="v num">'+k(d.vendas)+'</div><div class="d">'+T(d.vendas,l.vendas)+'</div></div><div><div class="k">Faturamento</div><div class="v num">'+P(d.fat)+'</div><div class="d">'+T(d.fat,l.fat)+'</div></div><div><div class="k">Taxa de conversão</div><div class="v num">'+j(d.conv)+'</div><div class="d">'+T(d.conv,l.conv)+'</div></div><div><div class="k">Clientes perdidos</div><div class="v num">'+k(d.perd)+'</div><div class="d">'+T(d.perd,l.perd,1)+"</div></div></div>"+totStrip(d,t6);
   function th(g,tx){var on=so.c===g;return"<th"+(on?' aria-sort="'+(so.d>0?"ascending":"descending")+'"':"")+'><button data-sort="'+g+'">'+tx+(on?so.d>0?" ▲":" ▼":"")+"</button></th>"}
   var todas=eq.length&&eq.every(function(e){return i.dall||i.dex[e.t.id]});
   h+='<div class="sechead"><h2 class="sec">Por equipe</h2><div class="tacts"><button class="btn ghost" data-dall="1">'+(todas?"Recolher todas":"Detalhar todas por corretor")+'</button><div class="colwrap"><button class="btn ghost" data-a="cols" aria-haspopup="true" aria-expanded="'+!!i.colsOpen+'">Colunas</button>'+(i.colsOpen?st():"")+'</div>'+(window.__okAcao("act-csv")?'<button class="btn ghost" data-a="csv">Exportar CSV</button>':"")+'</div></div>';
@@ -216,7 +241,7 @@ function telaDesDir(){
     h+='<tr class="atq"><td class="name"><button class="atb" data-dq="'+e.t.id+'" aria-expanded="'+ab+'" aria-label="'+(ab?"Recolher":"Detalhar")+" corretores da equipe "+f(e.t.nome)+'"><span class="car" aria-hidden="true">'+(ab?"▾":"▸")+'</span><span>'+f(e.t.nome)+'<span class="k vs">'+f(e.t.vert)+" · "+n+(n===1?" corretor":" corretores")+"</span></span></button></td>"+cels({vert:e.t.vert},e.m)+"</tr>";
     if(ab){if(!n)h+='<tr class="atc"><td colspan="'+(cols.length+1)+'" class="empty">Nenhum corretor nesta equipe.</td></tr>';
       e.cors.forEach(function(x){h+='<tr class="atc click" data-cor="'+x.c.id+'" tabindex="0" role="button" aria-label="Abrir resumo de '+f(x.c.nome)+'"><td class="name"><span>'+f(x.c.nome)+"</span></td>"+cels(x.c,x.m)+"</tr>"})}});
-  h+="</tbody>"+(eq.length?"<tfoot><tr><td>Total</td>"+cols.map(function(g){var b=g[0];return'<td class="num r">'+(b==="fat"?P(d.fat):b==="conv"?j(d.conv):k(d[b]))+"</td>"}).join("")+"</tr></tfoot>":"")+'</table></div><p class="note" style="margin-top:10px">Abra uma equipe para ver os corretores; clique em um corretor para abrir o resumo individual.</p></div>';
+  h+="</tbody>"+(eq.length?"<tfoot><tr><td>Total</td>"+cols.map(function(g){var b=g[0];return'<td class="num r">'+(b==="fat"||b==="tfa"?P(d[b]):b==="conv"?j(d.conv):k(d[b]))+"</td>"}).join("")+"</tr></tfoot>":"")+'</table></div><p class="note" style="margin-top:10px">Abra uma equipe para ver os corretores; clique em um corretor para abrir o resumo individual.</p></div>';
   if(!window.__dqOn){window.__dqOn=1;document.addEventListener("click",function(e){
     var b=e.target.closest&&e.target.closest("[data-dq],[data-dall]");if(!b)return;
     var d=b.dataset;e.stopPropagation();
@@ -227,6 +252,7 @@ function telaDesDir(){
 `;
 
 const CSS = `
+.strip.tot{margin-top:12px}
 .pgn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
 .pgn>div{display:flex;align-items:center;gap:10px}
 .pgn .vn{font-size:13px;color:var(--g700)}
