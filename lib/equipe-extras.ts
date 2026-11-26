@@ -33,7 +33,12 @@ const TROCAS: Troca[] = [
   // --- voltar da tela do corretor para a aba Atendimentos ---
   ['le("equipe-"+i.kind)', 'le(i.volta||"equipe-"+i.kind)'],
   ["if(t.det)return i.det=t.det,", "if(t.det)return i.volta=null,i.det=t.det,"],
-  ["Voltar para '+t.t+'", "Voltar para '+(i.volta?\"Atendimentos\":t.t)+'", 2],
+  ["Voltar para '+t.t+'", "Voltar para '+(i.volta?(i.voltaL||\"Atendimentos\"):t.t)+'", 2],
+  // --- botão no popup do corretor: abre os atendimentos dele ---
+  [
+    `</p><div class="grid2"><div><div class="k">Vendas</div>`,
+    `</p>'+(window.__PERM&&window.__PERM["equipe-desempenho"]===true&&window.__atq&&!e.g?(popOn(),'')+'<button class="btn atbtn" data-adet2="'+e.id+'">Ver atendimentos</button>':"")+'<div class="grid2"><div><div class="k">Vendas</div>`,
+  ],
   // --- tela do corretor: todos os negócios, por funil e situação, com link do card no Bitrix ---
   [
     `h+='<div class="sechead"><h2 class="sec">Negócios com alerta</h2><p class="note">Aguardando atendimento, sem atuação do corretor ou parados há 15 dias ou mais. Mostra os mais antigos de cada tipo.</p></div><div class="tw"><table style="min-width:640px"><thead><tr><th>Card</th><th style="text-align:left">'+t.cli+'</th><th style="text-align:left">Alerta</th></tr></thead><tbody>'+(al.length?al.map(function(q){return'<tr><td class="num" style="text-align:left">#'+q.id+'</td><td style="text-align:left">'+f(q.cli)+'</td><td style="text-align:left"><span class="tag" style="background:#F6E0DA;color:#8C3420">'+q.al+'</span></td></tr>'}).join(""):'<tr><td colspan="3" class="empty">Nenhum negócio com alerta.</td></tr>')+'</tbody></table></div></div>';`,
@@ -63,6 +68,12 @@ function pagerEq(){
   var a=q.i+1,b=Math.min(q.n,q.i+q.pg);
   return'<nav class="pgn" aria-label="Páginas da lista de corretores"><span class="k">'+k(a)+"–"+k(b)+" de "+k(q.n)+' corretores</span><div><button class="btn ghost" data-pgq="'+(i.pp-1)+'"'+(i.pp?"":" disabled")+'>Anterior</button><span class="vn">Página '+(i.pp+1)+" de "+q.pages+'</span><button class="btn ghost" data-pgq="'+(i.pp+1)+'"'+(i.pp<q.pages-1?"":" disabled")+">Próxima</button></div></nav>"}
 
+function popOn(){
+  if(window.__atPop)return;window.__atPop=1;document.addEventListener("click",function(e){
+    var b=e.target.closest&&e.target.closest("[data-adet2]");if(!b)return;
+    var c=A.filter(function(x){return x.id===b.getAttribute("data-adet2")})[0];if(!c)return;
+    e.stopPropagation();var ro=i.route,dl=D&&D[ro]&&D[ro].l;
+    i.drawer=null;i.det=c.id;i.kind=c.vert==="Terceiros"?"comprador":"lancamentos";i.tab="todos";i.editMetas=null;i.volta=ro;i.voltaL=dl||"tela anterior";i.nseg="todos";i.nst="todos";i.npg=0;le("equipe-detalhe")},!0)}
 function negCarga(e,r){
   var key=e.nome+"|"+e.team+"|"+r[0]+"|"+r[1],C=window.__neg||(window.__neg={});
   if(C[key])return C[key];
@@ -167,7 +178,7 @@ function telaAtend(){
     if(d.asort){i.asort=i.asort&&i.asort.c===d.asort?{c:d.asort,d:-i.asort.d}:{c:d.asort,d:d.asort==="nome"?1:-1};return E()}
     if(d.aeq){i.aall=!1;i.aex=i.aex||{};i.aex[d.aeq]=!i.aex[d.aeq];E();var z=document.querySelector('[data-aeq="'+d.aeq+'"]');if(z&&z.focus)z.focus();return}
     if(d.aall){var ex=!(i.aall||!1);if(i.aall){i.aall=!1;i.aex={}}else{i.aall=!0}return E()}
-    if(d.adet){i.det=d.adet;i.kind=d.akind||"comprador";i.tab="todos";i.editMetas=null;i.volta="equipe-atendimentos";i.nseg="todos";i.nst="todos";i.npg=0;return le("equipe-detalhe")}
+    if(d.adet){i.det=d.adet;i.kind=d.akind||"comprador";i.tab="todos";i.editMetas=null;i.volta="equipe-atendimentos";i.voltaL="Atendimentos";i.nseg="todos";i.nst="todos";i.npg=0;return le("equipe-detalhe")}
   },!0)}
   return h}
 `;
@@ -196,6 +207,10 @@ const CSS = `
 .nt .nl{color:var(--g900);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .nt .nl:hover,.nt .nl:focus-visible{text-decoration-color:var(--y)}
 .atfunil{margin-top:-4px}
+.back{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--g300);border-radius:999px;padding:8px 16px 8px 12px;color:var(--g900);font-weight:600;cursor:pointer;margin-bottom:16px}
+.back::before{content:"←";font-size:18px;line-height:1}
+.back:hover,.back:focus-visible{background:var(--y);border-color:var(--y)}
+.atbtn{margin-top:14px;width:100%}
 @media (max-width:640px){.pgn>div{width:100%;justify-content:space-between}.att tr.atc td.name{padding-left:24px}}
 `;
 
