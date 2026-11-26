@@ -12,6 +12,7 @@ import { marcarAbertura } from "@/lib/acesso";
 import { aplicarRegistroTelas } from "@/lib/acesso-cliente";
 import { aplicarProntos } from "@/lib/prontos";
 import { comVendasTemporarias } from "@/lib/vendas-temp";
+import { aplicarInicio } from "@/lib/inicio";
 
 /** Nome e ícone da aba: o título do esboço antigo fica depois e é ignorado pelo navegador. */
 const CABECA = '<head><meta charset="utf-8">';
@@ -44,9 +45,11 @@ export async function GET() {
     const html = comFaixaDev(aplicarProntos(aplicarUx(comAjusteCelular(
       aplicarRegistroTelas(
         comAba(
-          aplicarPermissoes(
-            aplicarAdmin(aplicarHist(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
-            permissoes,
+          aplicarInicio(
+            aplicarPermissoes(
+              aplicarAdmin(aplicarHist(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
+              permissoes,
+            ),
           ),
         ),
       ),
