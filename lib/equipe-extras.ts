@@ -14,11 +14,11 @@ const TROCAS: Troca[] = [
   [
     "Y=function(c,pk,mult){var r=faixa(pk,mult)",
     "window.__atq={sum:q_sum,NEG:q_NEG,FCH:q_FCH,AGU:q_AGU,est:q_est,pri:q_pri,priM:q_priM,priP:q_priP,faixa:faixa,dur:q_dur};" +
-      // Totais que não dependem do período: imóveis em pauta agora (estado atual), vendas e faturamento acumulados (tudo que o painel carrega, desde jan/2025).
-      'Y=function(c,pk,mult){var o=Y0(c,pk,mult),w=(typeof q_PAU!=="undefined"&&q_PAU[c.i])||null,v=porCor[c.i]||[];o.tpa=w?+w[1]||0:0;o.tvd=v.length;o.tfa=0;v.forEach(function(x){o.tfa+=x[7]});return o};' +
+      // Totais que não dependem do período: imóveis em pauta agora (estado atual), vendas e faturamento do ano atual.
+      'Y=function(c,pk,mult){var o=Y0(c,pk,mult),w=(typeof q_PAU!=="undefined"&&q_PAU[c.i])||null,v=porCor[c.i]||[];o.tpa=w?+w[1]||0:0;o.tvd=0;o.tfa=0;var an=String(new Date().getFullYear());v.forEach(function(x){if(String(x[0]).slice(0,4)===an){o.tvd++;o.tfa+=x[7]}});return o};' +
       "var Y0=function(c,pk,mult){var r=faixa(pk,mult)",
   ],
-  // --- colunas e cartões de totais acumulados (não mudam com o período) ---
+  // --- colunas e cartões de totais (não mudam com o período) ---
   [
     "var s={lc:0,lp:0,ll:0,tot:0,vendas:0,prop:0,ar:0,av:0,perd:0,fat:0,vgv:0};return e.forEach(function(n){var o=Y(n,a,t)",
     "var s={lc:0,lp:0,ll:0,tot:0,vendas:0,prop:0,ar:0,av:0,perd:0,fat:0,vgv:0,tpa:0,tvd:0,tfa:0};return e.forEach(function(n){var o=Y(n,a,t)",
@@ -27,11 +27,10 @@ const TROCAS: Troca[] = [
     '(b==="fat"?P(d.fat):b==="conv"?j(d.conv):k(d[b]))',
     '(b==="fat"||b==="tfa"?P(d[b]):b==="conv"?j(d.conv):k(d[b]))',
   ],
-  ['["perd","Clientes perdidos"]]', '["perd","Clientes perdidos"],["tpa","Imóveis em pauta (agora)"],["tvd","Vendas (acumulado)"],["tfa","Faturamento (acumulado)"]]'],
-  ['!((t[0]==="ar"||t[0]==="av")&&!e)', '!((t[0]==="ar"||t[0]==="av"||t[0]==="tpa")&&!e)'],
+  ['["perd","Clientes perdidos"]]', '["perd","Clientes perdidos"],["tpa","Imóveis em pauta (agora)"],["tvd","Vendas (ano atual)"],["tfa","Faturamento (ano atual)"]]'],
   [
     'return t==="ar"?n?s?a.ar:k(a.ar):d:',
-    'return t==="tpa"?n?s?a.tpa:k(a.tpa):d:t==="tvd"?s?a.tvd:k(a.tvd):t==="tfa"?s?a.tfa:P(a.tfa):t==="ar"?n?s?a.ar:k(a.ar):d:',
+    'return t==="tpa"?s?a.tpa:k(a.tpa):t==="tvd"?s?a.tvd:k(a.tvd):t==="tfa"?s?a.tfa:P(a.tfa):t==="ar"?n?s?a.ar:k(a.ar):d:',
   ],
   [
     '+T(d.perd,l.perd,1)+"</div></div></div>";function u(g,b){var m=i.sort.c===g[0]',
@@ -84,7 +83,7 @@ const TROCAS: Troca[] = [
 const JS = String.raw`
 function totStrip(d,t6){
   var fx='<div class="d"><span class="flat">';
-  return'<div class="strip tot">'+(t6?'<div><div class="k">Imóveis em pauta (agora)</div><div class="v num">'+k(d.tpa)+'</div>'+fx+'Situação atual</span></div></div>':"")+'<div><div class="k">Vendas (acumulado)</div><div class="v num">'+k(d.tvd)+'</div>'+fx+'Desde jan/2025</span></div></div><div><div class="k">Faturamento (acumulado)</div><div class="v num">'+P(d.tfa)+'</div>'+fx+'Desde jan/2025</span></div></div></div><p class="note" style="margin:-6px 0 14px">Totais acumulados e situação atual: não mudam com o período escolhido.</p>'}
+  return'<div class="strip tot">'+'<div><div class="k">Imóveis em pauta (agora)</div><div class="v num">'+k(d.tpa)+'</div>'+fx+'Situação atual</span></div></div>'+'<div><div class="k">Vendas (ano atual)</div><div class="v num">'+k(d.tvd)+'</div>'+fx+'Acumulado em '+new Date().getFullYear()+'</span></div></div><div><div class="k">Faturamento (ano atual)</div><div class="v num">'+P(d.tfa)+'</div>'+fx+'Acumulado em '+new Date().getFullYear()+'</span></div></div></div><p class="note" style="margin:-6px 0 14px">Pauta é a situação atual; vendas e faturamento são do ano atual. Não mudam com o período escolhido.</p>'}
 function pagEq(o){
   var PG=50,key=JSON.stringify([i.per,i.vert,i.eq,i.cor,i.sort,i.cf,o.length]);
   if(i.pk!==key){i.pk=key;i.pp=0}
