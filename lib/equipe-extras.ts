@@ -39,6 +39,11 @@ const TROCAS: Troca[] = [
     `</p><div class="grid2"><div><div class="k">Vendas</div>`,
     `</p>'+(window.__PERM&&window.__PERM["equipe-desempenho"]===true&&window.__atq&&!e.g?(popOn(),'')+'<button class="btn atbtn" data-adet2="'+e.id+'">Ver atendimentos</button>':"")+'<div class="grid2"><div><div class="k">Vendas</div>`,
   ],
+  // --- filtro de funil sobe para a barra de filtros, ao lado do período ---
+  [
+    `'+Ia();\n  h+='<div class="strip">`,
+    `'+filtroTop(Ia(),e);\n  h+='<div class="strip">`,
+  ],
   // --- tela do corretor: todos os negócios, por funil e situação, com link do card no Bitrix ---
   [
     `h+='<div class="sechead"><h2 class="sec">Negócios com alerta</h2><p class="note">Aguardando atendimento, sem atuação do corretor ou parados há 15 dias ou mais. Mostra os mais antigos de cada tipo.</p></div><div class="tw"><table style="min-width:640px"><thead><tr><th>Card</th><th style="text-align:left">'+t.cli+'</th><th style="text-align:left">Alerta</th></tr></thead><tbody>'+(al.length?al.map(function(q){return'<tr><td class="num" style="text-align:left">#'+q.id+'</td><td style="text-align:left">'+f(q.cli)+'</td><td style="text-align:left"><span class="tag" style="background:#F6E0DA;color:#8C3420">'+q.al+'</span></td></tr>'}).join(""):'<tr><td colspan="3" class="empty">Nenhum negócio com alerta.</td></tr>')+'</tbody></table></div></div>';`,
@@ -74,6 +79,11 @@ function popOn(){
     var c=A.filter(function(x){return x.id===b.getAttribute("data-adet2")})[0];if(!c)return;
     e.stopPropagation();var ro=i.route,dl=D&&D[ro]&&D[ro].l;
     i.drawer=null;i.det=c.id;i.kind=c.vert==="Terceiros"?"comprador":"lancamentos";i.tab="todos";i.editMetas=null;i.volta=ro;i.voltaL=dl||"tela anterior";i.nseg="todos";i.nst="todos";i.npg=0;le("equipe-detalhe")},!0)}
+function filtroTop(h,e){
+  if(e.vert!=="Terceiros")return h;
+  negBind();
+  var seg=i.nseg||"todos";
+  return h.replace(/<\/div>$/,'<div class="f nc"><span class="fl" id="nsg">Funil</span><div class="segc" role="group" aria-labelledby="nsg">'+[["todos","Todos"],["comprador","Comprador"],["proprietarios","Proprietário"]].map(function(z){return'<button data-nseg="'+z[0]+'" aria-pressed="'+(seg===z[0])+'">'+z[1]+"</button>"}).join("")+"</div></div></div>")}
 function negCarga(e,r){
   var key=e.nome+"|"+e.team+"|"+r[0]+"|"+r[1],C=window.__neg||(window.__neg={});
   if(C[key])return C[key];
@@ -93,7 +103,16 @@ function negSit(x){
   if(x[2]!=="Retorno posterior 45-90 dias"&&dias>=15)return{k:"alerta",t:dias+" dias sem atualização"};
   return{k:"aberto",t:"Em andamento"}}
 function negData(t){return t&&t.length>=10?t.slice(8,10)+"/"+t.slice(5,7)+"/"+t.slice(0,4):"—"}
+function negBind(){if(!window.__negOn){window.__negOn=1;document.addEventListener("click",function(ev){
+    var b=ev.target.closest&&ev.target.closest("[data-nseg],[data-nst],[data-npg],[data-nretry]");if(!b||b.disabled)return;
+    var q=b.dataset;ev.stopPropagation();
+    if(q.nseg){i.nseg=q.nseg;i.npg=0}
+    else if(q.nst){i.nst=q.nst;i.npg=0}
+    else if(q.npg!==void 0){i.npg=+q.npg}
+    else if(q.nretry){window.__neg={}}
+    E()},!0)}}
 function listaNeg(e,a,r){
+  negBind();
   var d=negCarga(e,r),ter=e.vert==="Terceiros",seg=ter?(i.nseg||"todos"):"todos",st=i.nst||"todos";
   var h='<div class="sechead"><h2 class="sec">Negócios do corretor</h2></div>';
   if(d.st==="load")return h+'<p class="empty">Carregando os negócios…</p></div>';
@@ -104,7 +123,6 @@ function listaNeg(e,a,r){
   var V=L.filter(function(y){return st==="todos"||(st==="aberto"?(y.s.k==="aberto"||y.s.k==="alerta"):y.s.k===st)});
   var PG=50,pgs=Math.max(1,Math.ceil(V.length/PG));if(!(i.npg>=0))i.npg=0;if(i.npg>pgs-1)i.npg=pgs-1;
   var ini=i.npg*PG;
-  if(ter){h+='<div class="filters atfunil" role="group" aria-label="Funil"><div class="f nc"><span class="fl" id="nsg">Funil</span><div class="segc" role="group" aria-labelledby="nsg">'+[["todos","Todos"],["comprador","Comprador"],["proprietarios","Proprietário"]].map(function(z){return'<button data-nseg="'+z[0]+'" aria-pressed="'+(seg===z[0])+'">'+z[1]+"</button>"}).join("")+"</div></div></div>"}
   h+='<div class="tabs" role="group" aria-label="Situação dos negócios">'+[["todos","Todos"],["aberto","Em andamento"],["alerta","Com alerta"],["ganho","Ganhos"],["perdido","Perdidos"]].map(function(z){return'<button data-nst="'+z[0]+'" aria-pressed="'+(st===z[0])+'" class="'+(st===z[0]?"on":"")+'">'+z[1]+" <span class=\"k\">"+k(n[z[0]])+"</span></button>"}).join("")+"</div>";
   h+='<div class="tw"><table class="nt"><thead><tr><th>Card</th><th>Cliente</th>'+(ter&&seg==="todos"?"<th>Funil</th>":"")+'<th>Etapa</th><th>Situação</th><th>Criado em</th><th>Última atualização</th></tr></thead><tbody>';
   if(!V.length)h+='<tr><td colspan="7" class="empty">Nenhum negócio neste filtro.</td></tr>';
@@ -113,14 +131,6 @@ function listaNeg(e,a,r){
   h+="</tbody></table></div>";
   if(pgs>1){var a1=ini+1,b1=Math.min(V.length,ini+PG);h+='<nav class="pgn" aria-label="Páginas dos negócios"><span class="k">'+k(a1)+"–"+k(b1)+" de "+k(V.length)+'</span><div><button class="btn ghost" data-npg="'+(i.npg-1)+'"'+(i.npg?"":" disabled")+'>Anterior</button><span class="vn">Página '+(i.npg+1)+" de "+pgs+'</span><button class="btn ghost" data-npg="'+(i.npg+1)+'"'+(i.npg<pgs-1?"":" disabled")+">Próxima</button></div></nav>"}
   if(d.mais)h+='<p class="note" style="margin-top:10px">Mostrando os 900 negócios mais recentes.</p>';
-  if(!window.__negOn){window.__negOn=1;document.addEventListener("click",function(ev){
-    var b=ev.target.closest&&ev.target.closest("[data-nseg],[data-nst],[data-npg],[data-nretry]");if(!b||b.disabled)return;
-    var q=b.dataset;ev.stopPropagation();
-    if(q.nseg){i.nseg=q.nseg;i.npg=0}
-    else if(q.nst){i.nst=q.nst;i.npg=0}
-    else if(q.npg!==void 0){i.npg=+q.npg}
-    else if(q.nretry){window.__neg={}}
-    E()},!0)}
   return h+"</div>"}
 function atKinds(c){var f=i.afunil||"todos",a=c.vert==="Terceiros"?[0,1]:[2];
   if(f==="comprador")return a.filter(function(x){return x===0});
