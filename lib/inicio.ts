@@ -27,7 +27,7 @@ function inicioNovo(){
   ys.forEach(function(x){T0.n+=x.y.vendas;T0.f+=x.y.fat;T0.g+=x.y.vgv;T1.n+=x.a.vendas;T1.f+=x.a.fat;T1.g+=x.a.vgv});
   var meta=0,sup=0;ts.forEach(function(t){var m=window.__meta(t.id,"mes");meta+=m.m;sup+=m.s});
   var pct=meta>0?T0.f/meta:null,rit=pct==null||!fr?null:pct/fr;
-  function dl(c,a){if(!a)return'<span class="flat">sem base</span>';var s=(c-a)/a;return'<span class="'+(Math.abs(s)<.005?"flat":s>0?"up":"down")+'">'+(s>0?"+":"")+(s*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"%</span>"}
+  function dl(c,a){if(!a)return"";var s=(c-a)/a;return'<span class="'+(Math.abs(s)<.005?"flat":s>0?"up":"down")+'">'+(s>0?"+":"")+(s*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"%</span>"}
   function dt(s){return s.slice(8,10)+"/"+s.slice(5,7)}
   var dd=new Date(Date.UTC(ano,mes,dia)).toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"});
   dd=dd.charAt(0).toUpperCase()+dd.slice(1);
@@ -55,14 +55,14 @@ function inicioNovo(){
   else rows=ys.map(function(x){return{id:"",nm:x.c.nome,sb:"",n:x.y.vendas,f:x.y.fat,pf:x.a.fat,m:0,pc:null}}).filter(function(r){return r.n>0});
   rows.sort(function(a,b){return b.f-a.f});
   var rm=Math.max.apply(null,rows.map(function(r){return r.pc!=null?r.pc:0}).concat([1])),rf=Math.max.apply(null,rows.map(function(r){return r.f}).concat([1]));
-  h+='<div class="ib"><section class="panel"><div class="ph"><h2>'+(por?"Equipes no mês":"Corretores no mês")+'</h2><p class="note">'+(por?"Ordenadas pelo VGC do mês; a barra mostra o quanto da meta já foi atingido.":"Ordenados pelo VGC do mês.")+'</p></div><div class="il">'+(rows.length?rows.map(function(r){
+  h+='<div class="ib"><section class="panel"><div class="ph"><h2>'+(por?"Equipes no mês":"Corretores no mês")+'</h2>'+(por?'<p class="note">Ordenadas pelo VGC do mês; a barra mostra o quanto da meta já foi atingido.</p>':"")+'</div><div class="il">'+(rows.length?rows.map(function(r){
     var bw=por&&r.pc!=null?Math.min(100,r.pc/Math.max(rm,1)*100):r.f/rf*100,ab=por&&verEq?' data-team="'+r.id+'" aria-label="Abrir desempenho da equipe '+f(r.nm)+'"':"";
     return'<'+(ab?"button":"div")+' class="ir'+(ab?" click":"")+'"'+ab+'><span class="nm">'+f(r.nm)+(r.sb?"<small>"+r.sb+"</small>":"")+'</span><span class="br"><i style="width:'+bw.toFixed(1)+'%"></i></span><span class="vl num">'+z(r.f)+'</span><span class="pc2 num">'+(r.pc!=null?'<span class="tag '+(r.pc>=1?"on":"")+'">'+j(r.pc,0)+"</span>":k(r.n)+(r.n===1?" venda":" vendas"))+'</span><span class="dv hm">'+dl(r.f,r.pf)+"</span></"+(ab?"button":"div")+">"}).join(""):'<p class="empty">Ainda sem vendas neste mês.</p>')+"</div></section>";
   /* Últimas vendas */
   var ok={},ul=[];cs.forEach(function(c){ok[c.i]=1});(D0.vendas||[]).forEach(function(v){if(ok[v[1]])ul.push(v)});
   ul.sort(function(a,b){return a[0]<b[0]?1:a[0]>b[0]?-1:b[7]-a[7]});
   ul=ul.slice(0,6).map(function(v){var c=D0.cors[v[1]];return{d:v[0],cn:c.nome,emp:v[5]||"",cat:v[4]||"",uni:v[3]||"",g:v[6]}});
-  h+='<section class="panel"><div class="ph"><h2>Últimas vendas</h2><p class="note">As seis mais recentes do escopo.</p></div><div class="il">'+(ul.length?ul.map(function(v){var oq=v.emp&&v.emp!=="(Em branco)"?v.emp:(v.cat||"Venda"),un=v.uni&&v.uni!=="(Em branco)"?" · "+v.uni:"";return'<div class="ir ul"><span class="dt num">'+dt(v.d)+'</span><span class="nm">'+f(v.cn)+"<small>"+f(oq+un)+'</small></span><span class="vl num">'+z(v.g)+"</span></div>"}).join(""):'<p class="empty">Sem vendas registradas.</p>')+"</div></section></div>";
+  h+='<section class="panel"><div class="ph"><h2>Últimas vendas</h2></div><div class="il">'+(ul.length?ul.map(function(v){var oq=v.emp&&v.emp!=="(Em branco)"?v.emp:(v.cat||"Venda"),un=v.uni&&v.uni!=="(Em branco)"?" · "+v.uni:"";return'<div class="ir ul"><span class="dt num">'+dt(v.d)+'</span><span class="nm">'+f(v.cn)+"<small>"+f(oq+un)+'</small></span><span class="vl num">'+z(v.g)+"</span></div>"}).join(""):'<p class="empty">Sem vendas registradas.</p>')+"</div></section></div>";
   h+='</div>';
   return h}
 `;
