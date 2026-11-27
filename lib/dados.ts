@@ -16,7 +16,8 @@ export type Dados = {
   atualizado: string | null;
   erro: string | null;
   teams: { id: string; nome: string; vert: "Terceiros" | "Lançamentos" }[];
-  cors: { id: string; i: number; nome: string; team: string; vert: string; g?: 1 }[];
+  /** g = gerente/diretor (fora de qualquer lista). ina = corretor que não está no cadastro de hoje (saíu ou mudou de equipe): some só das telas de Desempenho, nunca do BI. */
+  cors: { id: string; i: number; nome: string; team: string; vert: string; g?: 1; ina?: 1 }[];
   /** [data, indiceCorretor, fonte, unidade, categoria, empreendimento, vgv, vgc] */
   vendas: [string, number, string, string, string, string, number, number, string?, string?, string?, string?, string?, string?][];
   /** Extras (detalhe da venda): [..., negócio, código do imóvel ou empreendimento, comprador, proprietário(s), bairro, nome do empreendimento] */
@@ -480,7 +481,8 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
     return ix;
   };
   const porUsuario = new Map<string, number>();
-  // Só corretor ativo no cadastro de hoje aparece nas listas; quem sai ou mudou de equipe só deixa a venda nos totais.
+  // Corretor ativo no cadastro de hoje: o resto (saiu ou mudou de equipe) recebe `ina`. A marca vale só para as telas de
+  // Desempenho e listas de corretor; no BI e no Início a venda continua na equipe e no corretor onde aconteceu.
   const doCadastro = new Set<number>();
   for (const l of b.dim) {
     if (chefes.has(l[0])) continue;
@@ -496,7 +498,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
       if (!vn || (ehDir && !vertOk(vn))) continue;
       const ix = garantir(l[1] || "Sem corretor", l[8], vn);
       if (ix < 0) continue;
-      if (!doCadastro.has(ix) && !cors[ix].g) cors[ix].g = 1;
+      if (!doCadastro.has(ix) && !cors[ix].g) cors[ix].ina = 1;
       vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7]), l[12] ?? "", l[13] ?? "", l[14] ?? "", l[15] ?? "", l[16] ?? "", l[17] ?? ""]);
     }
   }
