@@ -13,10 +13,11 @@ Object.defineProperty(W.pers,"nome",{enumerable:!0,get:function(){if(i.per==="pe
 window.__pg=function(){
   if(i.per!=="pers")return"";
   var r=rgPers(),mx=fd(HJ);
-  return'<div class="f pgf" role="group" aria-label="Intervalo personalizado"><label class="fl" for="rg-a">De</label><input type="date" id="rg-a" value="'+r[0]+'" min="2025-01-01" max="'+mx+'"><label class="fl" for="rg-b">Até</label><input type="date" id="rg-b" value="'+r[1]+'" min="2025-01-01" max="'+mx+'"></div>'};
+  return'<div class="pgf" role="group" aria-label="Intervalo personalizado"><div class="f"><label class="fl" for="rg-a">De</label><input type="date" id="rg-a" value="'+r[0]+'" min="2025-01-01" max="'+mx+'"></div><div class="f"><label class="fl" for="rg-b">Até</label><input type="date" id="rg-b" value="'+r[1]+'" min="2025-01-01" max="'+mx+'"></div></div>'};
+window.__xl=function(h){return h.replace('<div class="f">','<div class="f"><label class="fl" for="f-per">Período</label>')};
 if(!window.__pgIni){window.__pgIni=1;
   var sp=document.createElement("style");
-  sp.textContent=".pgf{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.pgf .fl{margin:0;align-self:center}.pgf input[type=date]{height:40px;border:1px solid var(--line);border-radius:6px;padding:0 10px;font:inherit;font-size:14px;background:#fff;color:var(--g900)}";
+  sp.textContent=".pgf{display:flex;flex-direction:row;align-items:flex-end;gap:8px;flex-wrap:nowrap}.pgf .f{flex:1 1 0;min-width:0}.pgf input[type=date]{width:100%}.pgf input[type=date]{height:40px;border:1px solid var(--line);border-radius:6px;padding:0 10px;font:inherit;font-size:14px;background:#fff;color:var(--g900)}";
   document.head.appendChild(sp);
   document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest('[data-per="pers"]');if(b&&!i.rg)i.rg=faixa(i.per)},!0);
   document.addEventListener("change",function(e){var t=e.target;if(!t)return;
@@ -64,7 +65,8 @@ const EXTRAS: [string, string][] = [
   // O período personalizado ("cus") não vira botão nem opção de período.
   ["Object.keys(W).map(function(d){return'<button data-per=", "Object.keys(W).filter(function(d){return d!==\"cus\"}).map(function(d){return'<button data-per="],
   ["Object.keys(W).map(function(e){return[e,W[e].nome]})", "Object.keys(W).filter(function(e){return e!==\"cus\"}).map(function(e){return[e,e===\"pers\"?\"Personalizado\":W[e].nome]})"],
-  ["i.per)+\"</div>\"}var Na=", "i.per)+window.__pg()+\"</div>\"}var Na="],
+  ["i.per)+\"</div>\"}var Na=", "i.per))+window.__pg()+\"</div>\"}var Na="],
+  ["xe(\"f-per\",\"Período\",", "window.__xl(xe(\"f-per\",\"Período\","],
   ["'\">'+W[d].nome+\"</button>\"", "'\">'+(d===\"pers\"?\"Personalizado\":W[d].nome)+\"</button>\""],
   // Fechamentos: período anterior calculado de verdade com os mesmos filtros (antes era estimado por proporção); ticket médio em VGV, como no BI.
   ["r=F(a,i.per,1),v=t.length?n/t.length:0,p=r.vendas*v,c=r.fat*v", "r=window.__prev(a,ka),v=t.length?n/t.length:0,p=r.n,c=r.f"],
@@ -81,7 +83,7 @@ const EXTRAS: [string, string][] = [
   ["T(s,Math.round(s*.93))", "T(s,window.__prevAt(e,a))"],
   ["(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" acima de 40 min, \"+r+\" parados há 15 dias</span>", "(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" aguardando atendimento, \"+r+\" parados há 15 dias ou mais</span>"],
   ["n.m.pri+' min</td>", "(n.m.pri==null?\"—\":window.__fmt(n.m.pri)+(n.m.pp==null?\"\":'<div class=\"k\" style=\"font-size:12px;font-weight:400\">'+n.m.pp+'% no prazo</div>'))+'</td>"],
-  ["'</td><td class=\"num\">'+n.m.meta+\"%</td></tr>\"", "\"</td></tr>\""],
+  ["'</td><td class=\"num\">'+n.m.meta+\"%</td></tr>'", "\"</td></tr>\""],
   ["<th>Alertas</th><th>Metas da semana</th>", "<th>Alertas</th>"],
   ['<td colspan="7" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>', '<td colspan="6" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>'],
   ["G(a.t,a.ctx+\" | \"+_(),!0)+U(i.route)+na(a.vert)+ra(e,t)", "G(a.t,a.ctx+\" | \"+_(),!1)+U(i.route)+ra(e,t)"],
