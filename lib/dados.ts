@@ -475,16 +475,12 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
     return ix;
   };
   const porUsuario = new Map<string, number>();
-  // Equipes atuais de cada nome (cadastro ativo): quem hoje está em outra equipe não vira linha na equipe só por venda antiga.
-  const equipesAtuais = new Map<string, Set<string>>();
-  for (const l of b.dim) {
-    const st = equipesAtuais.get(l[0]) ?? new Set<string>();
-    st.add(l[1]);
-    equipesAtuais.set(l[0], st);
-  }
+  // Só corretor ativo no cadastro de hoje aparece nas listas; quem sai ou mudou de equipe só deixa a venda nos totais.
+  const doCadastro = new Set<number>();
   for (const l of b.dim) {
     if (chefes.has(l[0])) continue;
     const ix = garantir(l[0], l[1]);
+    if (ix >= 0) doCadastro.add(ix);
     if (ix >= 0 && l[2]) porUsuario.set(l[2], ix);
   }
 
@@ -495,8 +491,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
       if (!vn || (ehDir && !vertOk(vn))) continue;
       const ix = garantir(l[1] || "Sem corretor", l[8], vn);
       if (ix < 0) continue;
-      const atuais = equipesAtuais.get(l[1] || "");
-      if (atuais && !atuais.has(l[8]) && !cors[ix].g) cors[ix].g = 1;
+      if (!doCadastro.has(ix) && !cors[ix].g) cors[ix].g = 1;
       vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7]), l[12] ?? "", l[13] ?? "", l[14] ?? "", l[15] ?? "", l[16] ?? "", l[17] ?? ""]);
     }
   }
