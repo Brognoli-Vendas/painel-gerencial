@@ -99,8 +99,9 @@ function perStrip(d,l,t6){
 function corBind(){
   if(window.__corOn)return;window.__corOn=1;
   document.addEventListener("click",function(e){
-    var b=e.target.closest&&e.target.closest("[data-cor],[data-ctab]");if(!b)return;
+    var b=e.target.closest&&e.target.closest("[data-cor],[data-ctab],[data-cvp]");if(!b||b.disabled)return;
     e.stopPropagation();
+    if(b.getAttribute("data-cvp")!==null){i.cvp=+b.getAttribute("data-cvp");return E()}
     if(b.getAttribute("data-ctab")){i.ctab=b.getAttribute("data-ctab");return E()}
     abrirCor(b.getAttribute("data-cor"),"desemp")},!0)}
 function abrirCor(id,tab,rota){
@@ -121,19 +122,24 @@ function telaCorretor(){
   MS=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"],mv=[],m;
   for(m=0;m<12;m++)mv.push({v:0,f:0,g:0});
   por.forEach(function(y){var d=String(y[0]);if(d.slice(0,4)===String(an)){var q=+d.slice(5,7)-1;if(q>=0&&q<12){mv[q].v++;mv[q].f+=y[7];mv[q].g+=y[6]}}});
-  h+=totStrip(a,ter)+perStrip(a,p,ter);
-  var cols=Qe(ter,!ter).filter(function(g){return!i.hc[g[0]]});
-  h+='<div class="sechead"><h2 class="sec">Indicadores do corretor</h2></div><div class="tw"><table class="att"><thead><tr>'+grpHead(cols,function(g){return"<th>"+f(g[1])+"</th>"})+"</thead><tbody><tr>"+cols.map(function(g){return'<td class="num r">'+nt(e,a,g[0])+"</td>"}).join("")+"</tr></tbody></table></div>";
+  var an2=String(an),SH=function(t,n){return'<div class="sechead"><h2 class="sec">'+t+"</h2>"+(n?'<p class="note">'+n+"</p>":"")+"</div>"};
   var tl=a.tot||0,fr=[["Leads recebidos",a.tot,""],["Propostas geradas",a.prop,"m"],["Vendas",a.vendas,"y"],["Clientes perdidos",a.perd,"m"]];
-  h+='<div class="sechead"><h2 class="sec">Do lead à venda</h2></div><div class="fun" style="max-width:640px">'+fr.map(function(z){return"<div><span>"+z[0]+'</span><span><i class="'+z[2]+'" style="width:'+Math.max(tl?z[1]/tl*100:0,2)+'%"></i></span><span class="num" style="text-align:right">'+k(z[1])+"</span></div>"}).join("")+"</div>";
-  if(ter)h+='<p class="note" style="margin:-14px 0 24px">Leads recebidos: '+k(a.lc)+" de comprador e "+k(a.lp)+" de proprietário.</p>";
   var mx=Math.max.apply(null,mv.map(function(z){return z.v}).concat([1]));
-  h+='<div class="sechead"><h2 class="sec">Vendas em '+an+'</h2></div><svg class="cormes" viewBox="0 0 700 136" width="100%" role="img" aria-label="Vendas por mês em '+an+'">'+mv.map(function(z,q){var xx=10+q*58,ph=z.v/mx*90;return'<rect x="'+xx+'" y="'+(110-ph)+'" width="38" height="'+ph+'" rx="2" fill="'+(q===cm?"#FDC10C":"#3B3B3B")+'"/><text x="'+(xx+19)+'" y="'+(104-ph)+'" text-anchor="middle" font-size="12" fill="#3B3B3B">'+z.v+'</text><text x="'+(xx+19)+'" y="128" text-anchor="middle" font-size="12" fill="#6B6B68">'+MS[q]+"</text>"}).join("")+"</svg>";
-  var tv=0,tf=0,tg=0;
-  h+='<div class="sechead"><h2 class="sec">Resultado por mês em '+an+'</h2></div><div class="tw"><table class="att" style="min-width:560px"><thead><tr><th>Mês</th><th class="r">Vendas</th><th class="r">VGV</th><th class="r">Faturamento</th></tr></thead><tbody>'+mv.slice(0,cm+1).map(function(z,q){tv+=z.v;tf+=z.f;tg+=z.g;return"<tr><td>"+MS[q]+'</td><td class="num r">'+k(z.v)+'</td><td class="num r">'+mfm(z.g)+'</td><td class="num r">'+mfm(z.f)+"</td></tr>"}).join("")+'</tbody><tfoot><tr><td>Total</td><td class="num r">'+k(tv)+'</td><td class="num r">'+mfm(tg)+'</td><td class="num r">'+mfm(tf)+"</td></tr></tfoot></table></div>";
-  var vs=por.filter(function(y){return y[0]>=r[0]&&y[0]<=r[1]}).sort(function(y,z){return y[0]<z[0]?1:y[0]>z[0]?-1:0}),LIM=200;
-  h+='<div class="sechead"><h2 class="sec">Vendas do período</h2></div><div class="tw"><table class="att" style="min-width:860px"><thead><tr><th>Data</th><th>Empreendimento</th><th>Categoria</th><th>Unidade</th><th>Fonte</th><th class="r">VGV</th><th class="r">Faturamento</th></tr></thead><tbody>'+(vs.length?vs.slice(0,LIM).map(function(y){return"<tr><td>"+negData(String(y[0]))+"</td><td>"+f(y[5]||"—")+"</td><td>"+f(y[4]||"—")+"</td><td>"+f(y[3]||"—")+"</td><td>"+f(y[2]||"—")+'</td><td class="num r">'+mfm(y[6])+'</td><td class="num r">'+mfm(y[7])+"</td></tr>"}).join(""):'<tr><td colspan="7" class="empty">Nenhuma venda no período.</td></tr>')+"</tbody></table></div>"+(vs.length>LIM?'<p class="note" style="margin-top:10px">Mostrando as '+LIM+" vendas mais recentes de "+k(vs.length)+".</p>":"")+"</div>";
-  return h}
+  h+=SH("Acumulado de "+an2,"Não muda com o período escolhido")+totStrip(a,ter)+SH("Resultado no período",W[i.per].nome)+perStrip(a,p,ter);
+  h+='<div class="cgrid"><section class="vpanel"><div class="vh"><h2>Vendas em '+an+'</h2></div><svg class="cormes" viewBox="0 0 700 136" width="100%" role="img" aria-label="Vendas por mês em '+an+'">'+mv.map(function(z,q){var xx=10+q*58,ph=z.v/mx*90;return'<rect x="'+xx+'" y="'+(110-ph)+'" width="38" height="'+ph+'" rx="2" fill="'+(q===cm?"#FDC10C":"#3B3B3B")+'"/><text x="'+(xx+19)+'" y="'+(104-ph)+'" text-anchor="middle" font-size="12" fill="#3B3B3B">'+z.v+'</text><text x="'+(xx+19)+'" y="128" text-anchor="middle" font-size="12" fill="#6B6B68">'+MS[q]+"</text>"}).join("")+'</svg></section><section class="vpanel"><div class="vh"><h2>Do lead à venda</h2></div><div class="fun">'+fr.map(function(z){return"<div><span>"+z[0]+'</span><span><i class="'+z[2]+'" style="width:'+Math.max(tl?z[1]/tl*100:0,2)+'%"></i></span><span class="num" style="text-align:right">'+k(z[1])+"</span></div>"}).join("")+"</div>"+(ter?'<p class="note" style="margin-top:8px">Leads recebidos: '+k(a.lc)+" de comprador e "+k(a.lp)+" de proprietário.</p>":"")+"</section></div>";
+  var vs=por.filter(function(y){return y[0]>=r[0]&&y[0]<=r[1]}).sort(function(y,z){return y[0]<z[0]?1:y[0]>z[0]?-1:0}),PG=50,vk=e.id+"|"+i.per+"|"+vs.length;
+  if(i.cvk!==vk){i.cvk=vk;i.cvp=0}
+  var pgs=Math.max(1,Math.ceil(vs.length/PG));if(!(i.cvp>=0))i.cvp=0;if(i.cvp>pgs-1)i.cvp=pgs-1;
+  var ini=i.cvp*PG,vgv=0,fat=0;vs.forEach(function(y){vgv+=y[6];fat+=y[7]});
+  function tx(t){return t&&String(t).trim()?f(t):'<span class="vz">—</span>'}
+  h+='<section class="vpanel"><div class="vh"><h2>Detalhe das vendas</h2><p class="note">'+k(vs.length)+(vs.length===1?" venda":" vendas")+" no período, da mais recente para a mais antiga.</p></div>";
+  if(!vs.length)return h+'<p class="empty">Nenhuma venda neste período.</p></section></div>';
+  h+='<div class="tw"><table class="vt"><thead><tr><th>Data</th><th>Código</th><th>Proprietário</th><th>Comprador</th><th>Bairro</th><th class="r">Valor da venda (VGV)</th><th class="r">VGC</th></tr></thead><tbody>';
+  vs.slice(ini,ini+PG).forEach(function(y){var cod=y[9]||"",emp=y[13]||"",lan=e.vert==="Lançamentos";
+    h+='<tr><td class="num">'+negData(String(y[0]))+'</td><td class="num">'+(cod?f(cod):'<span class="vz">—</span>')+(lan&&emp?'<div class="k vs">'+f(emp)+"</div>":"")+"</td><td>"+tx(y[11])+"</td><td>"+tx(y[10])+"</td><td>"+tx(y[12])+'</td><td class="num r">'+mfm(y[6])+'</td><td class="num r">'+mfm(y[7])+"</td></tr>"});
+  h+='</tbody><tfoot><tr><td colspan="5">Total do período ('+k(vs.length)+')</td><td class="num r">'+mfm(vgv)+'</td><td class="num r">'+mfm(fat)+"</td></tr></tfoot></table></div>";
+  if(pgs>1){var a1=ini+1,b1=Math.min(vs.length,ini+PG);h+='<nav class="pgn" aria-label="Páginas do detalhe das vendas"><span class="k">'+k(a1)+"–"+k(b1)+" de "+k(vs.length)+'</span><div><button class="btn ghost" data-cvp="'+(i.cvp-1)+'"'+(i.cvp?"":" disabled")+'>Anterior</button><span class="vn">Página '+(i.cvp+1)+" de "+pgs+'</span><button class="btn ghost" data-cvp="'+(i.cvp+1)+'"'+(i.cvp<pgs-1?"":" disabled")+">Próxima</button></div></nav>"}
+  return h+"</section></div>"}
 function pagEq(o){
   corBind();
   var PG=50,key=JSON.stringify([i.per,i.vert,i.eq,i.cor,i.sort,i.cf,o.length]);
@@ -299,7 +305,9 @@ function telaDesDir(){
 const CSS = `
 .strip.tot{margin-bottom:12px}
 .att th.grp,.tw th.grp{text-align:center!important;border-left:1px solid var(--line)}
-.cormes{max-width:760px}
+.cormes{max-width:100%}
+.cgrid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;margin-bottom:16px}
+@media (max-width:860px){.cgrid{grid-template-columns:minmax(0,1fr)}}
 .pgn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
 .pgn>div{display:flex;align-items:center;gap:10px}
 .pgn .vn{font-size:13px;color:var(--g700)}
