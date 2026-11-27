@@ -9,7 +9,7 @@ import "server-only";
  */
 const EXPORTAR = String.raw`(function(btn){
 var nome="tabela";
-function limpa(td){var ps=[];function an(n){if(n.nodeType===3){var t=n.textContent.replace(/[▲▼▸▾]/g,"").replace(/\s+/g," ").trim();if(t)ps.push(t)}else if(n.nodeType===1){[].forEach.call(n.childNodes,an)}}an(td);return ps.join(" - ")}
+function limpa(td){var ps=[];function an(n){if(n.nodeType===3){var t=n.textContent.replace(new RegExp("["+String.fromCharCode(9650,9660,9656,9662)+"]","g"),"").replace(/\s+/g," ").trim();if(t)ps.push(t)}else if(n.nodeType===1){[].forEach.call(n.childNodes,an)}}an(td);return ps.join(" - ")}
 function acha(){var hs=document.querySelectorAll(".sechead h2");for(var k=0;k<hs.length;k++){if(hs[k].textContent.trim()===nome){var sh=hs[k].closest(".sechead"),tw=sh&&sh.nextElementSibling;return{sh:sh,tb:tw&&tw.querySelector("table")}}}return{}}
 try{
 var h2=btn.closest(".sechead")&&btn.closest(".sechead").querySelector("h2");if(h2)nome=h2.textContent.trim();
@@ -27,8 +27,8 @@ corpo(tb.tBodies[0]);corpo(tb.tFoot);
 if(todos){window.__csvAll=0;i.pp=pp;E()}
 var csv=linhas.map(function(l){return l.map(function(v){v=String(v==null?"":v);return/[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(";")}).join("\r\n");
 var d=new Date(),dia=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-var slug=nome.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-var blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),an=document.createElement("a");
+var slug=nome.normalize("NFD").replace(new RegExp("["+String.fromCharCode(768)+"-"+String.fromCharCode(879)+"]","g"),"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+var blob=new Blob([String.fromCharCode(65279)+csv],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),an=document.createElement("a");
 an.href=u;an.download="desempenho-"+slug+"-"+dia+".csv";document.body.appendChild(an);an.click();
 setTimeout(function(){an.remove();URL.revokeObjectURL(u)},1500);
 var b2=acha().sh&&acha().sh.querySelector('[data-a="csv"]');if(b2){b2.textContent="Exportado";setTimeout(function(){var b3=document.querySelector('[data-a="csv"]');if(b3)b3.textContent="Exportar CSV"},2000)}
