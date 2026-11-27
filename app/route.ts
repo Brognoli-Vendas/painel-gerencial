@@ -17,6 +17,7 @@ import { aplicarDetalhesVendas } from "@/lib/detalhes-vendas";
 import { aplicarEquipeExtras } from "@/lib/equipe-extras";
 import { aplicarEquipeAtivas } from "@/lib/equipe-ativas";
 import { aplicarModeloColunas, modeloDe } from "@/lib/colunas-modelo";
+import { aplicarExportarCsv } from "@/lib/exportar-csv";
 import { aquecerNegocios } from "@/lib/negocios";
 
 /** Nome e ícone da aba: o título do esboço antigo fica depois e é ignorado pelo navegador. */
@@ -51,12 +52,12 @@ export async function GET() {
     const html = comFaixaDev(aplicarProntos(aplicarUx(comAjusteCelular(
       aplicarRegistroTelas(
         comAba(
-          aplicarModeloColunas(aplicarEquipeAtivas(aplicarEquipeExtras(aplicarDetalhesVendas(aplicarInicio(
+          aplicarModeloColunas(aplicarExportarCsv(aplicarEquipeAtivas(aplicarEquipeExtras(aplicarDetalhesVendas(aplicarInicio(
             aplicarPermissoes(
               aplicarAdmin(aplicarHist(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
               permissoes,
             ),
-          )))), modeloDe(permissoes)),
+          ))))), modeloDe(permissoes)),
         ),
       ),
     ))));
