@@ -83,7 +83,7 @@ const EXTRAS: [string, string][] = [
   ["T(s,Math.round(s*.93))", "T(s,window.__prevAt(e,a))"],
   ["(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" acima de 40 min, \"+r+\" parados há 15 dias</span>", "(l+r)+'</div><div class=\"d\"><span class=\"flat\">'+l+\" aguardando atendimento, \"+r+\" parados há 15 dias ou mais</span>"],
   ["n.m.pri+' min</td>", "(n.m.pri==null?\"—\":window.__fmt(n.m.pri)+(n.m.pp==null?\"\":'<div class=\"k\" style=\"font-size:12px;font-weight:400\">'+n.m.pp+'% no prazo</div>'))+'</td>"],
-  ["'</td><td class=\"num\">'+n.m.meta+\"%</td></tr>'", "\"</td></tr>\""],
+  ["'</td><td class=\"num\">'+n.m.meta+\"%</td></tr>\"", "\"</td></tr>\""],
   ["<th>Alertas</th><th>Metas da semana</th>", "<th>Alertas</th>"],
   ['<td colspan="7" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>', '<td colspan="6" class="empty">Nenhum corretor no filtro atual. Ajuste a equipe ou o período.</td>'],
   ["G(a.t,a.ctx+\" | \"+_(),!0)+U(i.route)+na(a.vert)+ra(e,t)", "G(a.t,a.ctx+\" | \"+_(),!1)+U(i.route)+ra(e,t)"],
