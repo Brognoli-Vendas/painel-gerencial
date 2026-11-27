@@ -6,7 +6,9 @@ import { comCardComprador } from "@/lib/card-comprador";
 /**
  * Vendas confirmadas direto no Bitrix que a Nekt ainda não trouxe (tabela vendas_temporarias).
  * Cada linha segue a ordem da consulta de fechamentos:
- * [data, corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe, natureza].
+ * [data, corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe, natureza],
+ * mais, opcionalmente, os dados do detalhe da venda:
+ * [12 código do imóvel, 13 comprador, 14 proprietário(s), 15 bairro, 16 nome do empreendimento, 17 card do comprador].
  * Some sozinha quando a Nekt traz a mesma venda (mesma data, corretor e VGV) ou após 3 dias (no banco).
  */
 type Temp = { deal_id: string; linha: string[] };
@@ -37,7 +39,7 @@ export function juntarTemporarias(dados: Dados, temps: Temp[]): Dados {
   if (!temps.length) return dados;
   const cors = dados.cors.map((c) => ({ ...c }));
   const vendas = dados.vendas.slice();
-  for (const { linha: l } of temps) {
+  for (const { deal_id, linha: l } of temps) {
     const [data, corretor, fonte, unidade, categoria, emp, vgvTxt, vgcTxt, team, vert] = l;
     const vgv = Number(vgvTxt);
     const vgc = Number(vgcTxt);
@@ -51,7 +53,9 @@ export function juntarTemporarias(dados: Dados, temps: Temp[]): Dados {
       ix = cors.length;
       cors.push({ id: "c" + ix, i: ix, nome: corretor, team, vert });
     }
-    vendas.push([data, ix, fonte, unidade, categoria, emp, vgv, vgc]);
+    // Detalhe da venda: negócio, código do imóvel, comprador, proprietário, bairro, empreendimento e card do comprador (posições 8 a 14).
+    const linhaVenda = [data, ix, fonte, unidade, categoria, emp, vgv, vgc, String(deal_id ?? ""), l[12] ?? "", l[13] ?? "", l[14] ?? "", l[15] ?? "", l[16] ?? "", l[17] ?? ""];
+    vendas.push(linhaVenda as unknown as Dados["vendas"][number]);
   }
   return { ...dados, cors, vendas };
 }
