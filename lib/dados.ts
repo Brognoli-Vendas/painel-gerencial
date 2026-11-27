@@ -7,7 +7,7 @@ import type { Perfil } from "@/lib/permissions";
 /**
  * Camada de dados reais do painel (BI Comercial e Desempenho).
  * Fonte: Nekt (somente leitura). Regra do BI: vendas brutas (venda_flag = 1),
- * data de referência = created_date; meta e supermeta em VGC (R$).
+ * data de referência = data de criação (created_at) no horário de Brasília; meta e supermeta em VGC (R$).
  * Cache curto em memória para não consultar a Nekt a cada clique.
  */
 
@@ -127,6 +127,11 @@ function nomeCurto(nome: string): string {
 const TIPOS = "('Comprador Terceiros','Proprietário','Comprador Lançamentos','Comprador Preço de Custo')";
 const FUNIL = "CASE tipo_lead WHEN 'Comprador Terceiros' THEN 0 WHEN 'Proprietário' THEN 1 ELSE 2 END";
 const DIA = (c: string) => `date(${c} AT TIME ZONE 'America/Sao_Paulo')`;
+/**
+ * Dia da venda no horário de Brasília. O created_date da Nekt é a data em UTC (venda criada depois das 21h
+ * de Brasília cairia no dia seguinte), por isso a data sai de created_at convertido.
+ */
+const DIA_VENDA = DIA("created_at");
 const PAUTA = "nekt_trusted.bitrix_spa_1046";
 /** Imóvel com cadastro completo: descrição, IPTU, valor de venda, proprietário vinculado e, se apartamento, condomínio. */
 const CADASTRO_OK =
@@ -246,8 +251,8 @@ async function buscarEquipe(): Promise<Equipe> {
 async function buscar(): Promise<Bruto> {
   const [vendas, metas, dim, ult, mp, eq] = await Promise.all([
     nektSql(
-      "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel, CAST(deal_id AS varchar) " +
-        "FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01' ORDER BY created_date",
+      `SELECT CAST(${DIA_VENDA} AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel, CAST(deal_id AS varchar) ` +
+        `FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND ${DIA_VENDA} >= date '2025-01-01' ORDER BY 1`,
     ),
     nektSql(
       "SELECT created_year, created_month, equipe_codigo, nome_equipe_final, equipe_vertical, meta, supermeta FROM nekt_service.fact_metas_equipes WHERE CAST(created_year AS integer) >= 2025",
@@ -266,7 +271,7 @@ async function buscar(): Promise<Bruto> {
   // Detalhe da venda (lista do BI Fechamentos): comprador (contato do negócio), proprietário(s) e bairro do imóvel (SPA 1046) ou do empreendimento.
   // Consulta à parte e opcional: se falhar, o painel segue com os números e só essas colunas ficam vazias.
   const ext = await nektSql(
-    "WITH f AS (SELECT * FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01'), " +
+    "WITH f AS (SELECT * FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND " + DIA_VENDA + " >= date '2025-01-01'), " +
       "own AS (SELECT CAST(s.id AS varchar) sid, array_join(array_agg(DISTINCT trim(concat(coalesce(c.name,''),' ',coalesce(c.last_name,'')))), ' / ') nomes " +
       "FROM nekt_trusted.bitrix_spa_1046 s CROSS JOIN UNNEST(s.ufcrm10proprietarios) AS u(p) " +
       "LEFT JOIN nekt_trusted.bitrix_contacts c ON CAST(c.id AS varchar) = regexp_replace(CAST(u.p AS varchar), '^C_', '') " +
@@ -315,8 +320,8 @@ async function buscar(): Promise<Bruto> {
 
 const TTL_MS = 5 * 60_000; // dados com mais de 5 minutos são renovados em segundo plano
 const RETENTA_MS = 60_000; // depois de uma falha, não insiste na Nekt por 1 minuto
-// Chave da cópia no banco. v2: inclui as colunas do detalhe da venda; a produção (v1) não sobrescreve mais esta cópia.
-const CHAVE = "bruto-v2";
+// Chave da cópia no banco. v3: a data da venda passou a ser a de Brasília (antes UTC); a cópia v2 tinha datas em UTC.
+const CHAVE = "bruto-v3";
 let cache: { em: number; dado: Bruto } | null = null;
 let voo: Promise<Bruto> | null = null;
 let lendo: Promise<{ em: number; dado: Bruto } | null> | null = null;
