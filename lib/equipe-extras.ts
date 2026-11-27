@@ -13,12 +13,12 @@ const TROCAS: Troca[] = [
   // --- exporta os cálculos reais já carregados no navegador (só leitura) ---
   [
     "Y=function(c,pk,mult){var r=faixa(pk,mult)",
-    "window.__atq={sum:q_sum,NEG:q_NEG,FCH:q_FCH,AGU:q_AGU,est:q_est,pri:q_pri,priM:q_priM,priP:q_priP,faixa:faixa,dur:q_dur};" +
-      // Totais que não dependem do período: imóveis em pauta agora (estado atual), vendas e faturamento do ano atual.
+    "window.__atq={sum:q_sum,NEG:q_NEG,FCH:q_FCH,AGU:q_AGU,est:q_est,pri:q_pri,priM:q_priM,priP:q_priP,faixa:faixa,dur:q_dur,por:porCor};" +
+      // Totais que não dependem do período: imóveis em pauta agora (estado atual), vendas e faturamento acumulados (tudo que o painel carrega, desde jan/2025).
       'Y=function(c,pk,mult){var o=Y0(c,pk,mult),w=(typeof q_PAU!=="undefined"&&q_PAU[c.i])||null,v=porCor[c.i]||[];o.tpa=w?+w[1]||0:0;o.tvd=0;o.tfa=0;var an=String(new Date().getFullYear());v.forEach(function(x){if(String(x[0]).slice(0,4)===an){o.tvd++;o.tfa+=x[7]}});return o};' +
       "var Y0=function(c,pk,mult){var r=faixa(pk,mult)",
   ],
-  // --- colunas e cartões de totais (não mudam com o período) ---
+  // --- colunas e cartões de totais acumulados (não mudam com o período) ---
   [
     "var s={lc:0,lp:0,ll:0,tot:0,vendas:0,prop:0,ar:0,av:0,perd:0,fat:0,vgv:0};return e.forEach(function(n){var o=Y(n,a,t)",
     "var s={lc:0,lp:0,ll:0,tot:0,vendas:0,prop:0,ar:0,av:0,perd:0,fat:0,vgv:0,tpa:0,tvd:0,tfa:0};return e.forEach(function(n){var o=Y(n,a,t)",
@@ -27,39 +27,43 @@ const TROCAS: Troca[] = [
     '(b==="fat"?P(d.fat):b==="conv"?j(d.conv):k(d[b]))',
     '(b==="fat"||b==="tfa"?P(d[b]):b==="conv"?j(d.conv):k(d[b]))',
   ],
-  ['["perd","Clientes perdidos"]]', '["perd","Clientes perdidos"],["tpa","Imóveis em pauta (agora)"],["tvd","Vendas (ano atual)"],["tfa","Faturamento (ano atual)"]]'],
+  [
+    '["ar","Agenciamentos realizados"],["av","Agenciamentos vendidos"],["prop","Propostas geradas"],["vendas","Vendas"],["fat","Faturamento"],["lc","Comprador"],["lp","Proprietário"],["ll","Lançamento"],["conv","Taxa de conversão"],["perd","Clientes perdidos"]]',
+    '["ar","Agenciamentos realizados"],["av","Agenciamentos vendidos"],["tpa","Imóveis em pauta (agora)"],["lp","Proprietário"],["ll","Lançamento"],["lc","Comprador"],["prop","Propostas geradas"],["vendas","Vendas"],["fat","Faturamento"],["conv","Taxa de conversão"],["perd","Clientes perdidos"],["tvd","Vendas (ano atual)"],["tfa","Faturamento (ano atual)"]]',
+  ],
+  // cabeçalho agrupado por categoria (gerente)
+  [
+    `u(qe[0],p?2:0);var M=!1;return n.forEach(function(g){Ca(g[0])?M||(c+='<th class="grp" colspan="'+p+'">Leads recebidos</th>',M=!0):c+=u(g,p?2:0)}),c+="</tr>"+(p?"<tr>"+v.map(function(g){return u(g,0)}).join("")+"</tr>":"")+"</thead><tbody>"`,
+    `u(qe[0],2);return c+=grpHead(n,u)+"</thead><tbody>"`,
+  ],
+  // totais acumulados acima dos dados do período (gerente)
+  [`c+='<div class="strip">'+(t?'`, `c+=totStrip(d,t)+'<div class="strip">'+(t?'`],
+  // nomes das telas
+  ['l:"Desempenho por corretor"', 'l:"Desempenho da Equipe"'],
+  ['G("Desempenho por corretor",', 'G("Desempenho da Equipe",'],
   [
     'return t==="ar"?n?s?a.ar:k(a.ar):d:',
     'return t==="tpa"?s?a.tpa:k(a.tpa):t==="tvd"?s?a.tvd:k(a.tvd):t==="tfa"?s?a.tfa:P(a.tfa):t==="ar"?n?s?a.ar:k(a.ar):d:',
   ],
-  [
-    '+T(d.perd,l.perd,1)+"</div></div></div>";function u(g,b){var m=i.sort.c===g[0]',
-    '+T(d.perd,l.perd,1)+"</div></div></div>"+totStrip(d,t);function u(g,b){var m=i.sort.c===g[0]',
-  ],
   // --- permissão: a aba Atendimentos vale para quem vê o Desempenho ---
   [
     '(e==="equipe-detalhe"?P["equipe-desempenho"]===true:P[e]===true)',
-    '((e==="equipe-detalhe"||e==="equipe-atendimentos")?P["equipe-desempenho"]===true:P[e]===true)',
+    '((e==="equipe-detalhe"||e==="equipe-atendimentos"||e==="equipe-corretor")?P["equipe-desempenho"]===true:P[e]===true)',
   ],
   // --- registro da tela, ao lado do Desempenho ---
   [
     "var pa=D;D={},[",
-    'var pa=D;pa["equipe-atendimentos"]={m:"equipe",l:"Atendimentos",f:["per","vert","eq"]};D={},[',
+    'var pa=D;pa["equipe-atendimentos"]={m:"equipe",l:"Atendimentos da Equipe",f:["per","vert","eq"]};pa["equipe-corretor"]={m:"equipe",l:"Corretor",hidden:!0};D={},[',
   ],
   [
     '"equipe-desempenho","equipe-reativacao","operacao-roletas","operacao-checkin","equipe-comprador"',
-    '"equipe-desempenho","equipe-atendimentos","equipe-reativacao","operacao-roletas","operacao-checkin","equipe-comprador"',
+    '"equipe-desempenho","equipe-atendimentos","equipe-corretor","equipe-reativacao","operacao-roletas","operacao-checkin","equipe-comprador"',
   ],
-  ['"equipe-desempenho":$e,', '"equipe-desempenho":function(){return S().nivel==="Diretoria"?telaDesDir():$e()},"equipe-atendimentos":telaAtend,'],
+  ['"equipe-desempenho":$e,', '"equipe-desempenho":function(){return S().nivel==="Diretoria"?telaDesDir():$e()},"equipe-atendimentos":telaAtend,"equipe-corretor":telaCorretor,'],
   // --- voltar da tela do corretor para a aba Atendimentos ---
   ['le("equipe-"+i.kind)', 'le(i.volta||"equipe-"+i.kind)'],
   ["if(t.det)return i.det=t.det,", "if(t.det)return i.volta=null,i.det=t.det,"],
   ["Voltar para '+t.t+'", "Voltar para '+(i.volta?(i.voltaL||\"Atendimentos\"):t.t)+'", 2],
-  // --- botão no popup do corretor: abre os atendimentos dele ---
-  [
-    `</p><div class="grid2"><div><div class="k">Vendas</div>`,
-    `</p>'+(window.__PERM&&window.__PERM["equipe-desempenho"]===true&&window.__atq&&!e.g?(popOn(),'')+'<button class="btn atbtn" data-adet2="'+e.id+'">Ver atendimentos</button>':"")+'<div class="grid2"><div><div class="k">Vendas</div>`,
-  ],
   // --- filtro de funil sobe para a barra de filtros, ao lado do período ---
   [
     `'+Ia();\n  h+='<div class="strip">`,
@@ -83,8 +87,55 @@ const TROCAS: Troca[] = [
 const JS = String.raw`
 function totStrip(d,t6){
   var fx='<div class="d"><span class="flat">';
-  return'<div class="strip tot">'+'<div><div class="k">Imóveis em pauta (agora)</div><div class="v num">'+k(d.tpa)+'</div>'+fx+'Situação atual</span></div></div>'+'<div><div class="k">Vendas (ano atual)</div><div class="v num">'+k(d.tvd)+'</div>'+fx+'Acumulado em '+new Date().getFullYear()+'</span></div></div><div><div class="k">Faturamento (ano atual)</div><div class="v num">'+P(d.tfa)+'</div>'+fx+'Acumulado em '+new Date().getFullYear()+'</span></div></div></div><p class="note" style="margin:-6px 0 14px">Pauta é a situação atual; vendas e faturamento são do ano atual. Não mudam com o período escolhido.</p>'}
+  return'<div class="strip tot">'+'<div><div class="k">Imóveis em pauta (agora)</div><div class="v num">'+k(d.tpa)+'</div>'+fx+'Situação atual</span></div></div>'+'<div><div class="k">Vendas (ano atual)</div><div class="v num">'+k(d.tvd)+'</div>'+fx+'Acumulado em '+new Date().getFullYear()+'</span></div></div><div><div class="k">Faturamento (ano atual)</div><div class="v num">'+P(d.tfa)+'</div>'+fx+'Acumulado em '+new Date().getFullYear()+'</span></div></div></div>'}
+function grpDe(id){return id==="ar"||id==="av"||id==="tpa"?"Agenciamentos":id==="lp"||id==="ll"||id==="lc"?"Leads recebidos":id==="tvd"||id==="tfa"?"Acumulado do ano":"Resultado no período"}
+function grpHead(cols,fn){
+  var gs=[],h="";
+  cols.forEach(function(g){var n=grpDe(g[0]),l=gs[gs.length-1];if(l&&l.n===n)l.c++;else gs.push({n:n,c:1})});
+  gs.forEach(function(g){h+='<th class="grp" colspan="'+g.c+'">'+g.n+"</th>"});
+  return h+"</tr><tr>"+cols.map(function(g){return fn(g,0)}).join("")+"</tr>"}
+function perStrip(d,l,t6){
+  return'<div class="strip">'+(t6?'<div><div class="k">Agenciamentos realizados</div><div class="v num">'+k(d.ar)+'</div><div class="d">'+T(d.ar,l.ar)+'</div></div><div><div class="k">Agenciamentos vendidos</div><div class="v num">'+k(d.av)+'</div><div class="d">'+T(d.av,l.av)+"</div></div>":"")+(window.__hasProp?'<div><div class="k">Propostas geradas</div><div class="v num">'+k(d.prop)+'</div><div class="d">'+T(d.prop,l.prop)+'</div></div>':"")+'<div><div class="k">Vendas</div><div class="v num">'+k(d.vendas)+'</div><div class="d">'+T(d.vendas,l.vendas)+'</div></div><div><div class="k">Faturamento</div><div class="v num">'+P(d.fat)+'</div><div class="d">'+T(d.fat,l.fat)+'</div></div><div><div class="k">Taxa de conversão</div><div class="v num">'+j(d.conv)+'</div><div class="d">'+T(d.conv,l.conv)+'</div></div><div><div class="k">Clientes perdidos</div><div class="v num">'+k(d.perd)+'</div><div class="d">'+T(d.perd,l.perd,1)+"</div></div></div>"}
+function corBind(){
+  if(window.__corOn)return;window.__corOn=1;
+  document.addEventListener("click",function(e){
+    var b=e.target.closest&&e.target.closest("[data-cor],[data-ctab]");if(!b)return;
+    e.stopPropagation();
+    if(b.getAttribute("data-ctab")){i.ctab=b.getAttribute("data-ctab");return E()}
+    abrirCor(b.getAttribute("data-cor"),"desemp")},!0)}
+function abrirCor(id,tab,rota){
+  i.drawer=null;i.cid=id;i.ctab=tab;i.volta=rota||i.route;i.nseg="todos";i.nst="todos";i.npg=0;le("equipe-corretor")}
+function mfm(n){return(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function telaCorretor(){
+  var Q=window.__atq,e=A.filter(function(x){return x.id===i.cid})[0];
+  if(!e||!Q)return'<div class="page wrap"><button class="back" data-go="equipe-desempenho">Voltar para Desempenho da Equipe</button><p class="empty">Corretor não encontrado. Volte e escolha um corretor.</p></div>';
+  var ter=e.vert==="Terceiros",tab=i.ctab||"desemp",vl=(D[i.volta]&&D[i.volta].l)||"Desempenho da Equipe",
+  ini=e.nome.split(" ").map(function(q){return q[0]}).slice(0,2).join("");
+  var h='<div class="page wrap"><button class="back" data-back>Voltar para '+f(vl)+'</button><div class="who"><div class="av">'+ini+'</div><div><h1 style="font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.15">'+f(e.nome)+'</h1><p class="note">Corretor da equipe '+f(ee(e.team))+" | "+W[i.per].nome+"</p></div></div>"+(tab==="atend"?filtroTop(Ia(),e):Ia());
+  h+='<div class="tabs" role="group" aria-label="Seções do corretor"><button data-ctab="desemp" aria-pressed="'+(tab==="desemp")+'">Desempenho do Corretor</button><button data-ctab="atend" aria-pressed="'+(tab==="atend")+'">Atendimentos do Corretor</button></div>';
+  if(tab==="atend"){
+    i.det=e.id;i.kind=ter?"comprador":"lancamentos";
+    var x=la(),k0=x.indexOf('<div class="strip">');
+    return h+(k0>-1?x.slice(k0):x)}
+  var a=Y(e,i.per),p=Y(e,i.per,1),r=Q.faixa(i.per),por=(Q.por&&Q.por[e.i])||[],an=new Date().getFullYear(),cm=new Date().getMonth(),
+  MS=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"],mv=[],m;
+  for(m=0;m<12;m++)mv.push({v:0,f:0,g:0});
+  por.forEach(function(y){var d=String(y[0]);if(d.slice(0,4)===String(an)){var q=+d.slice(5,7)-1;if(q>=0&&q<12){mv[q].v++;mv[q].f+=y[7];mv[q].g+=y[6]}}});
+  h+=totStrip(a,ter)+perStrip(a,p,ter);
+  var cols=Qe(ter,!ter).filter(function(g){return!i.hc[g[0]]});
+  h+='<div class="sechead"><h2 class="sec">Indicadores do corretor</h2></div><div class="tw"><table class="att"><thead><tr>'+grpHead(cols,function(g){return"<th>"+f(g[1])+"</th>"})+"</thead><tbody><tr>"+cols.map(function(g){return'<td class="num r">'+nt(e,a,g[0])+"</td>"}).join("")+"</tr></tbody></table></div>";
+  var tl=a.tot||0,fr=[["Leads recebidos",a.tot,""],["Propostas geradas",a.prop,"m"],["Vendas",a.vendas,"y"],["Clientes perdidos",a.perd,"m"]];
+  h+='<div class="sechead"><h2 class="sec">Do lead à venda</h2></div><div class="fun" style="max-width:640px">'+fr.map(function(z){return"<div><span>"+z[0]+'</span><span><i class="'+z[2]+'" style="width:'+Math.max(tl?z[1]/tl*100:0,2)+'%"></i></span><span class="num" style="text-align:right">'+k(z[1])+"</span></div>"}).join("")+"</div>";
+  if(ter)h+='<p class="note" style="margin:-14px 0 24px">Leads recebidos: '+k(a.lc)+" de comprador e "+k(a.lp)+" de proprietário.</p>";
+  var mx=Math.max.apply(null,mv.map(function(z){return z.v}).concat([1]));
+  h+='<div class="sechead"><h2 class="sec">Vendas em '+an+'</h2></div><svg class="cormes" viewBox="0 0 700 136" width="100%" role="img" aria-label="Vendas por mês em '+an+'">'+mv.map(function(z,q){var xx=10+q*58,ph=z.v/mx*90;return'<rect x="'+xx+'" y="'+(110-ph)+'" width="38" height="'+ph+'" rx="2" fill="'+(q===cm?"#FDC10C":"#3B3B3B")+'"/><text x="'+(xx+19)+'" y="'+(104-ph)+'" text-anchor="middle" font-size="12" fill="#3B3B3B">'+z.v+'</text><text x="'+(xx+19)+'" y="128" text-anchor="middle" font-size="12" fill="#6B6B68">'+MS[q]+"</text>"}).join("")+"</svg>";
+  var tv=0,tf=0,tg=0;
+  h+='<div class="sechead"><h2 class="sec">Resultado por mês em '+an+'</h2></div><div class="tw"><table class="att" style="min-width:560px"><thead><tr><th>Mês</th><th class="r">Vendas</th><th class="r">VGV</th><th class="r">Faturamento</th></tr></thead><tbody>'+mv.slice(0,cm+1).map(function(z,q){tv+=z.v;tf+=z.f;tg+=z.g;return"<tr><td>"+MS[q]+'</td><td class="num r">'+k(z.v)+'</td><td class="num r">'+mfm(z.g)+'</td><td class="num r">'+mfm(z.f)+"</td></tr>"}).join("")+'</tbody><tfoot><tr><td>Total</td><td class="num r">'+k(tv)+'</td><td class="num r">'+mfm(tg)+'</td><td class="num r">'+mfm(tf)+"</td></tr></tfoot></table></div>";
+  var vs=por.filter(function(y){return y[0]>=r[0]&&y[0]<=r[1]}).sort(function(y,z){return y[0]<z[0]?1:y[0]>z[0]?-1:0}),LIM=200;
+  h+='<div class="sechead"><h2 class="sec">Vendas do período</h2></div><div class="tw"><table class="att" style="min-width:860px"><thead><tr><th>Data</th><th>Empreendimento</th><th>Categoria</th><th>Unidade</th><th>Fonte</th><th class="r">VGV</th><th class="r">Faturamento</th></tr></thead><tbody>'+(vs.length?vs.slice(0,LIM).map(function(y){return"<tr><td>"+negData(String(y[0]))+"</td><td>"+f(y[5]||"—")+"</td><td>"+f(y[4]||"—")+"</td><td>"+f(y[3]||"—")+"</td><td>"+f(y[2]||"—")+'</td><td class="num r">'+mfm(y[6])+'</td><td class="num r">'+mfm(y[7])+"</td></tr>"}).join(""):'<tr><td colspan="7" class="empty">Nenhuma venda no período.</td></tr>')+"</tbody></table></div>"+(vs.length>LIM?'<p class="note" style="margin-top:10px">Mostrando as '+LIM+" vendas mais recentes de "+k(vs.length)+".</p>":"")+"</div>";
+  return h}
 function pagEq(o){
+  corBind();
   var PG=50,key=JSON.stringify([i.per,i.vert,i.eq,i.cor,i.sort,i.cf,o.length]);
   if(i.pk!==key){i.pk=key;i.pp=0}
   var pages=Math.max(1,Math.ceil(o.length/PG));if(!(i.pp>=0))i.pp=0;if(i.pp>pages-1)i.pp=pages-1;
@@ -97,12 +148,6 @@ function pagerEq(){
   var a=q.i+1,b=Math.min(q.n,q.i+q.pg);
   return'<nav class="pgn" aria-label="Páginas da lista de corretores"><span class="k">'+k(a)+"–"+k(b)+" de "+k(q.n)+' corretores</span><div><button class="btn ghost" data-pgq="'+(i.pp-1)+'"'+(i.pp?"":" disabled")+'>Anterior</button><span class="vn">Página '+(i.pp+1)+" de "+q.pages+'</span><button class="btn ghost" data-pgq="'+(i.pp+1)+'"'+(i.pp<q.pages-1?"":" disabled")+">Próxima</button></div></nav>"}
 
-function popOn(){
-  if(window.__atPop)return;window.__atPop=1;document.addEventListener("click",function(e){
-    var b=e.target.closest&&e.target.closest("[data-adet2]");if(!b)return;
-    var c=A.filter(function(x){return x.id===b.getAttribute("data-adet2")})[0];if(!c)return;
-    e.stopPropagation();var ro=i.route,dl=D&&D[ro]&&D[ro].l;
-    i.drawer=null;i.det=c.id;i.kind=c.vert==="Terceiros"?"comprador":"lancamentos";i.tab="todos";i.editMetas=null;i.volta=ro;i.voltaL=dl||"tela anterior";i.nseg="todos";i.nst="todos";i.npg=0;le("equipe-detalhe")},!0)}
 function filtroTop(h,e){
   if(e.vert!=="Terceiros")return h;
   negBind();
@@ -187,7 +232,7 @@ function telaAtend(){
   eq.sort(function(a,b){return so.c==="nome"?(a.t.nome<b.t.nome?-1:a.t.nome>b.t.nome?1:0)*so.d:cmp(a,b,a.m,b.m)});
   eq.forEach(function(e){e.cors.sort(function(a,b){return so.c==="nome"?(a.c.nome<b.c.nome?-1:a.c.nome>b.c.nome?1:0)*so.d:cmp(a,b,a.m,b.m)})});
   if(!i.aex)i.aex={};
-  var h='<div class="page wrap">'+G("Atendimentos","negócios do Bitrix por equipe, com detalhe por corretor | "+_(),!1)+U("equipe-atendimentos");
+  var h='<div class="page wrap">'+G("Atendimentos da Equipe","negócios do Bitrix por equipe, com detalhe por corretor | "+_(),!1)+U("equipe-atendimentos");
   h+='<div class="filters atfunil" role="group" aria-label="Funil"><div class="f nc"><span class="fl" id="lafn">Funil</span><div class="segc" role="group" aria-labelledby="lafn">'+fn.map(function(x){return'<button data-afunil="'+x[0]+'" aria-pressed="'+((i.afunil||"todos")===x[0])+'">'+x[1]+"</button>"}).join("")+"</div></div></div>";
   h+='<div class="strip"><div><div class="k">Negócios no período</div><div class="v num">'+k(tot.at||0)+'</div><div class="d"><span class="flat">Recebidos pelas equipes</span></div></div><div><div class="k">Em atendimento</div><div class="v num">'+k(tot.ea||0)+'</div><div class="d"><span class="flat">Negócios abertos agora</span></div></div><div><div class="k">Em proposta ou negociação</div><div class="v num">'+k(tot.ep||0)+'</div><div class="d"><span class="flat">Abertos agora</span></div></div><div><div class="k">1º atendimento (médio)</div><div class="v num">'+(Q.priM(tot)==null?"—":Q.dur(Q.priM(tot)))+'</div><div class="d"><span class="flat">'+(Q.priP(tot)==null?"Sem atendimentos no período":Q.priP(tot)+"% no prazo")+'</span></div></div><div><div class="k">Ganhos</div><div class="v num">'+k(tot.g||0)+'</div><div class="d"><span class="flat">No período</span></div></div><div><div class="k">Perdidos</div><div class="v num">'+k(tot.l||0)+'</div><div class="d"><span class="flat">No período</span></div></div><div><div class="k">Alertas abertos</div><div class="v num">'+k((tot.a40||0)+(tot.p15||0))+'</div><div class="d"><span class="flat">'+(tot.a40||0)+" aguardando atendimento, "+(tot.p15||0)+" parados há 15 dias ou mais</span></div></div></div>";
   function th(c,t,cl){var on=so.c===c;return"<th"+(cl?' class="'+cl+'"':"")+(on?' aria-sort="'+(so.d>0?"ascending":"descending")+'"':"")+'><button data-asort="'+c+'">'+t+(on?so.d>0?" ▲":" ▼":"")+"</button></th>"}
@@ -212,11 +257,12 @@ function telaAtend(){
     if(d.asort){i.asort=i.asort&&i.asort.c===d.asort?{c:d.asort,d:-i.asort.d}:{c:d.asort,d:d.asort==="nome"?1:-1};return E()}
     if(d.aeq){i.aall=!1;i.aex=i.aex||{};i.aex[d.aeq]=!i.aex[d.aeq];E();var z=document.querySelector('[data-aeq="'+d.aeq+'"]');if(z&&z.focus)z.focus();return}
     if(d.aall){var ex=!(i.aall||!1);if(i.aall){i.aall=!1;i.aex={}}else{i.aall=!0}return E()}
-    if(d.adet){i.det=d.adet;i.kind=d.akind||"comprador";i.tab="todos";i.editMetas=null;i.volta="equipe-atendimentos";i.voltaL="Atendimentos";i.nseg="todos";i.nst="todos";i.npg=0;return le("equipe-detalhe")}
+    if(d.adet)return abrirCor(d.adet,"atend","equipe-atendimentos");
   },!0)}
   return h}
 
 function telaDesDir(){
+  corBind();
   var a=We(),cols=Qe(a[0],a[1]).filter(function(g){return!i.hc[g[0]]}),t6=a[0];
   var cs=me().filter(function(c){return!c.g}),so=i.sort||(i.sort={c:"nome",d:1});
   var eq=te().map(function(t){var cors=cs.filter(function(c){return c.team===t.id}).map(function(c){return{c:c,m:Y(c,i.per)}});return{t:t,cors:cors,m:F(cors.map(function(x){return x.c}),i.per)}});
@@ -227,12 +273,12 @@ function telaDesDir(){
   var cmp=so.c==="nome"?cmpN:cmpM;eq.sort(cmp);eq.forEach(function(e){e.cors.sort(cmp)});
   var d=F(cs,i.per),l=F(cs,i.per,1);
   if(!i.dex)i.dex={};
-  var h='<div class="page wrap">'+G("Desempenho por corretor",_()+" | vendas, faturamento, leads e agenciamentos reais por equipe",!1)+U("equipe-desempenho");
-  h+='<div class="strip">'+(t6?'<div><div class="k">Agenciamentos realizados</div><div class="v num">'+k(d.ar)+'</div><div class="d">'+T(d.ar,l.ar)+'</div></div><div><div class="k">Agenciamentos vendidos</div><div class="v num">'+k(d.av)+'</div><div class="d">'+T(d.av,l.av)+"</div></div>":"")+(window.__hasProp?'<div><div class="k">Propostas geradas</div><div class="v num">'+k(d.prop)+'</div><div class="d">'+T(d.prop,l.prop)+'</div></div>':"")+'<div><div class="k">Vendas</div><div class="v num">'+k(d.vendas)+'</div><div class="d">'+T(d.vendas,l.vendas)+'</div></div><div><div class="k">Faturamento</div><div class="v num">'+P(d.fat)+'</div><div class="d">'+T(d.fat,l.fat)+'</div></div><div><div class="k">Taxa de conversão</div><div class="v num">'+j(d.conv)+'</div><div class="d">'+T(d.conv,l.conv)+'</div></div><div><div class="k">Clientes perdidos</div><div class="v num">'+k(d.perd)+'</div><div class="d">'+T(d.perd,l.perd,1)+"</div></div></div>"+totStrip(d,t6);
-  function th(g,tx){var on=so.c===g;return"<th"+(on?' aria-sort="'+(so.d>0?"ascending":"descending")+'"':"")+'><button data-sort="'+g+'">'+tx+(on?so.d>0?" ▲":" ▼":"")+"</button></th>"}
+  var h='<div class="page wrap">'+G("Desempenho da Equipe",_()+" | vendas, faturamento, leads e agenciamentos reais por equipe",!1)+U("equipe-desempenho");
+  h+=totStrip(d,t6)+perStrip(d,l,t6);
+  function th(g,tx,b){var on=so.c===g;return"<th"+(b?' rowspan="'+b+'"':"")+(on?' aria-sort="'+(so.d>0?"ascending":"descending")+'"':"")+'><button data-sort="'+g+'">'+tx+(on?so.d>0?" ▲":" ▼":"")+"</button></th>"}
   var todas=eq.length&&eq.every(function(e){return i.dall||i.dex[e.t.id]});
   h+='<div class="sechead"><h2 class="sec">Por equipe</h2><div class="tacts"><button class="btn ghost" data-dall="1">'+(todas?"Recolher todas":"Detalhar todas por corretor")+'</button><div class="colwrap"><button class="btn ghost" data-a="cols" aria-haspopup="true" aria-expanded="'+!!i.colsOpen+'">Colunas</button>'+(i.colsOpen?st():"")+'</div>'+(window.__okAcao("act-csv")?'<button class="btn ghost" data-a="csv">Exportar CSV</button>':"")+'</div></div>';
-  h+='<div class="tw"><table class="att"><thead><tr>'+th("nome","Equipe")+cols.map(function(g){return th(g[0],g[1])}).join("")+"</tr></thead><tbody>";
+  h+='<div class="tw"><table class="att"><thead><tr>'+th("nome","Equipe",2)+grpHead(cols,function(g){return th(g[0],g[1])})+"</thead><tbody>";
   if(!eq.length)h+='<tr><td colspan="'+(cols.length+1)+'" class="empty">Nenhuma equipe no filtro atual. Ajuste a equipe ou o período.</td></tr>';
   function cels(q,m){return cols.map(function(g){return'<td class="num r">'+nt(q,m,g[0])+"</td>"}).join("")}
   eq.forEach(function(e){
@@ -251,7 +297,9 @@ function telaDesDir(){
 `;
 
 const CSS = `
-.strip.tot{margin-top:12px}
+.strip.tot{margin-bottom:12px}
+.att th.grp,.tw th.grp{text-align:center!important;border-left:1px solid var(--line)}
+.cormes{max-width:760px}
 .pgn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
 .pgn>div{display:flex;align-items:center;gap:10px}
 .pgn .vn{font-size:13px;color:var(--g700)}
