@@ -1,6 +1,7 @@
 import "server-only";
 import type { Dados } from "@/lib/dados";
 import type { Perfil } from "@/lib/permissions";
+import { comCardComprador } from "@/lib/card-comprador";
 
 /**
  * Vendas confirmadas direto no Bitrix que a Nekt ainda não trouxe (tabela vendas_temporarias).
@@ -57,5 +58,5 @@ export function juntarTemporarias(dados: Dados, temps: Temp[]): Dados {
 
 export async function comVendasTemporarias(dados: Dados, perfil: Perfil): Promise<Dados> {
   if (dados.erro || (perfil.nivel !== "diretoria" && perfil.nivel !== "gerente")) return dados;
-  return juntarTemporarias(dados, await ler());
+  return comCardComprador(juntarTemporarias(dados, await ler()));
 }

@@ -12,6 +12,12 @@ import { marcarAbertura } from "@/lib/acesso";
 import { aplicarRegistroTelas } from "@/lib/acesso-cliente";
 import { aplicarProntos } from "@/lib/prontos";
 import { comVendasTemporarias } from "@/lib/vendas-temp";
+import { aplicarInicio } from "@/lib/inicio";
+import { aplicarDetalhesVendas } from "@/lib/detalhes-vendas";
+import { aplicarEquipeExtras } from "@/lib/equipe-extras";
+import { aplicarEquipeAtivas } from "@/lib/equipe-ativas";
+import { aplicarModeloColunas, modeloDe } from "@/lib/colunas-modelo";
+import { aquecerNegocios } from "@/lib/negocios";
 
 /** Nome e ícone da aba: o título do esboço antigo fica depois e é ignorado pelo navegador. */
 const CABECA = '<head><meta charset="utf-8">';
@@ -37,6 +43,7 @@ export const maxDuration = 120; // a renovação dos dados na Nekt roda depois d
 /** A aplicação: a última versão validada do esboço, atrás do login. */
 export async function GET() {
   const { perfil, permissoes } = await exigirSessao();
+  if (permissoes["equipe-desempenho"] === true) aquecerNegocios(); // deixa os negócios por corretor prontos antes de alguém abrir a tela
   await marcarAbertura(perfil.id); // registra o acesso de quem já estava com a sessão aberta
   try {
     const usuarios = perfil.admin ? await carregarUsuariosAdmin() : [];
@@ -44,10 +51,12 @@ export async function GET() {
     const html = comFaixaDev(aplicarProntos(aplicarUx(comAjusteCelular(
       aplicarRegistroTelas(
         comAba(
-          aplicarPermissoes(
-            aplicarAdmin(aplicarHist(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
-            permissoes,
-          ),
+          aplicarModeloColunas(aplicarEquipeAtivas(aplicarEquipeExtras(aplicarDetalhesVendas(aplicarInicio(
+            aplicarPermissoes(
+              aplicarAdmin(aplicarHist(aplicarExtras(aplicarSessao(await lerEsboco(), perfil, dados))), usuarios),
+              permissoes,
+            ),
+          )))), modeloDe(permissoes)),
         ),
       ),
     ))));

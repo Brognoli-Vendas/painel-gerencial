@@ -49,6 +49,9 @@ export type Permissoes = Record<string, boolean>;
 export function permissoesPadrao(u: Pick<Perfil, "nivel" | "vertical" | "admin">): Permissoes {
   const p: Permissoes = {};
   [...TELAS.map((t) => t.id), ...ACOES.map((a) => a.id)].forEach((k) => (p[k] = false));
+  // Modelos de colunas do Desempenho da Equipe (escolhidos no cadastro do gerente); não são telas nem ações.
+  p["col-lanc"] = false;
+  p["col-prontos"] = false;
   const on = (...ks: string[]) => ks.forEach((k) => (p[k] = true));
   const lanc = u.vertical === "lancamentos";
 

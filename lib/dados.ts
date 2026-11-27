@@ -18,7 +18,8 @@ export type Dados = {
   teams: { id: string; nome: string; vert: "Terceiros" | "Lançamentos" }[];
   cors: { id: string; i: number; nome: string; team: string; vert: string; g?: 1 }[];
   /** [data, indiceCorretor, fonte, unidade, categoria, empreendimento, vgv, vgc] */
-  vendas: [string, number, string, string, string, string, number, number][];
+  vendas: [string, number, string, string, string, string, number, number, string?, string?, string?, string?, string?, string?][];
+  /** Extras (detalhe da venda): [..., negócio, código do imóvel ou empreendimento, comprador, proprietário(s), bairro, nome do empreendimento] */
   /** [AAAA-MM, equipe, meta, supermeta] */
   metas: [string, string, number, number][];
   /** Minha Equipe (negócios do Bitrix). [corretor, funil(0 comprador, 1 proprietário, 2 lançamentos), "AAAA-MM-DD,n;..."] */
@@ -175,14 +176,14 @@ async function buscarEquipe(): Promise<Equipe> {
     ),
     nektSql(
       `WITH b AS (SELECT CAST(assigned_by_id AS varchar) u, ${FUNIL} k, stage_description e, count(*) n, ` +
-        `count_if(stage_description <> 'Retorno posterior 45-90 dias' AND date_diff('day', coalesce(last_activity_time, date_modify), now()) >= 15) p ` +
+        `count_if(stage_description <> 'Retorno posterior 45-90 dias' AND date_diff('day', date_modify, now()) >= 15) p ` +
         `FROM nekt_service.fact_deals WHERE stage_semantic_id = 'P' AND tipo_lead IN ${TIPOS} GROUP BY 1,2,3) ` +
         `SELECT u, k, array_join(array_agg(concat(e, '|', CAST(n AS varchar), '|', CAST(p AS varchar))), ';') FROM b GROUP BY 1,2`,
     ),
     nektSql(
       `SELECT CAST(deal_id AS varchar), substr(title, 1, 60), u, CAST(k AS varchar), CAST(dias AS varchar) FROM (` +
-        `SELECT deal_id, title, CAST(assigned_by_id AS varchar) u, ${FUNIL} k, date_diff('day', coalesce(last_activity_time, date_modify), now()) dias, ` +
-        `row_number() OVER (PARTITION BY assigned_by_id, ${FUNIL} ORDER BY coalesce(last_activity_time, date_modify) ASC) rn ` +
+        `SELECT deal_id, title, CAST(assigned_by_id AS varchar) u, ${FUNIL} k, date_diff('day', date_modify, now()) dias, ` +
+        `row_number() OVER (PARTITION BY assigned_by_id, ${FUNIL} ORDER BY date_modify ASC) rn ` +
         `FROM nekt_service.fact_deals WHERE stage_semantic_id = 'P' AND stage_description <> 'Retorno posterior 45-90 dias' AND tipo_lead IN ${TIPOS}) ` +
         `WHERE dias >= 15 AND rn <= 2 ORDER BY dias DESC LIMIT 990`,
     ),
@@ -245,7 +246,7 @@ async function buscarEquipe(): Promise<Equipe> {
 async function buscar(): Promise<Bruto> {
   const [vendas, metas, dim, ult, mp, eq] = await Promise.all([
     nektSql(
-      "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel " +
+      "SELECT CAST(created_date AS varchar), corretor, fonte, unidade, categoria, empreendimento, vgv, vgc, equipe_codigo, equipe_vertical, nome_equipe_final, natureza_imovel, CAST(deal_id AS varchar) " +
         "FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01' ORDER BY created_date",
     ),
     nektSql(
@@ -261,6 +262,26 @@ async function buscar(): Promise<Bruto> {
     buscarEquipe().catch(() => null), // Minha Equipe: se falhar, só essas telas ficam sem números
   ]);
   if (vendas.truncado || metas.truncado || dim.truncado || mp?.truncado) throw new Error("Nekt devolveu resultado parcial.");
+
+  // Detalhe da venda (lista do BI Fechamentos): comprador (contato do negócio), proprietário(s) e bairro do imóvel (SPA 1046) ou do empreendimento.
+  // Consulta à parte e opcional: se falhar, o painel segue com os números e só essas colunas ficam vazias.
+  const ext = await nektSql(
+    "WITH f AS (SELECT * FROM nekt_service.fact_fechamentos_final WHERE venda_flag = 1 AND CAST(created_date AS varchar) >= '2025-01-01'), " +
+      "own AS (SELECT CAST(s.id AS varchar) sid, array_join(array_agg(DISTINCT trim(concat(coalesce(c.name,''),' ',coalesce(c.last_name,'')))), ' / ') nomes " +
+      "FROM nekt_trusted.bitrix_spa_1046 s CROSS JOIN UNNEST(s.ufcrm10proprietarios) AS u(p) " +
+      "LEFT JOIN nekt_trusted.bitrix_contacts c ON CAST(c.id AS varchar) = regexp_replace(CAST(u.p AS varchar), '^C_', '') " +
+      "WHERE CAST(s.id AS varchar) IN (SELECT codigo_imovel FROM f) GROUP BY 1) " +
+      "SELECT CAST(f.deal_id AS varchar), coalesce(f.codigo_imovel, ''), trim(concat(coalesce(cb.name,''),' ',coalesce(cb.last_name,''))), " +
+      "CASE WHEN f.natureza_imovel LIKE '%Terceiros%' THEN coalesce(own.nomes, '') ELSE '' END, " +
+      "trim(CASE WHEN f.natureza_imovel LIKE '%Terceiros%' THEN coalesce(s.ufcrm10bairro, '') ELSE coalesce(e.bairro, '') END), coalesce(e.nome, '') " +
+      "FROM f LEFT JOIN nekt_trusted.bitrix_contacts cb ON CAST(cb.id AS varchar) = CAST(f.contact_id AS varchar) " +
+      "LEFT JOIN own ON own.sid = f.codigo_imovel " +
+      "LEFT JOIN nekt_trusted.bitrix_spa_1046 s ON CAST(s.id AS varchar) = f.codigo_imovel AND f.natureza_imovel LIKE '%Terceiros%' " +
+      "LEFT JOIN nekt_service.cadastro_de_empreendimento e ON CAST(e.id AS varchar) = f.codigo_imovel AND f.natureza_imovel LIKE '%Lan%'",
+  ).catch(() => null);
+  const porNegocio = new Map<string, string[]>();
+  if (ext && !ext.truncado) for (const l of ext.linhas) porNegocio.set(l[0], l.slice(1, 6));
+  for (const l of vendas.linhas) l.push(...(porNegocio.get(l[12]) ?? ["", "", "", "", ""]));
 
   const teams = new Map<string, { nome: string; vert: "Terceiros" | "Lançamentos" }>();
   for (const l of metas.linhas) {
@@ -294,7 +315,8 @@ async function buscar(): Promise<Bruto> {
 
 const TTL_MS = 5 * 60_000; // dados com mais de 5 minutos são renovados em segundo plano
 const RETENTA_MS = 60_000; // depois de uma falha, não insiste na Nekt por 1 minuto
-const CHAVE = "bruto-v1";
+// Chave da cópia no banco. v2: inclui as colunas do detalhe da venda; a produção (v1) não sobrescreve mais esta cópia.
+const CHAVE = "bruto-v2";
 let cache: { em: number; dado: Bruto } | null = null;
 let voo: Promise<Bruto> | null = null;
 let lendo: Promise<{ em: number; dado: Bruto } | null> | null = null;
@@ -466,7 +488,7 @@ export async function carregarDados(perfil: Perfil): Promise<Dados> {
       if (!vn || (ehDir && !vertOk(vn))) continue;
       const ix = garantir(l[1] || "Sem corretor", l[8], vn);
       if (ix < 0) continue;
-      vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7])]);
+      vendas.push([l[0], ix, l[2], l[3], l[4], l[5], num(l[6]), num(l[7]), l[12] ?? "", l[13] ?? "", l[14] ?? "", l[15] ?? "", l[16] ?? "", l[17] ?? ""]);
     }
   }
   const metas: Dados["metas"] = [];
