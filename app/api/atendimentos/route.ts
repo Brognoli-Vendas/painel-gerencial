@@ -32,18 +32,16 @@ export async function GET(req: Request) {
   const dt = /^\d{4}-\d{2}-\d{2}$/;
   if (!nome || !equipe || !dt.test(de) || !dt.test(ate)) return json({ erro: "pedido inválido" }, 400);
 
-  // Escopo e busca andam juntos; a resposta só sai se o corretor estiver no escopo da pessoa.
+  // O escopo é verificado antes de qualquer consulta à Nekt (os dados vêm do cache de 5 min, então é rápido).
+  // Depois disso nome e equipe são valores conhecidos do cadastro, e não texto livre.
+  const dadosEscopo = await carregarDados(perfil);
+  if (!dadosEscopo.cors.some((c) => c.nome === nome && c.team === equipe && !c.g)) return json({ erro: "corretor fora do seu escopo" }, 403);
   const chave = [nome, equipe, de, ate].join("|");
-  const escopo = carregarDados(perfil).then((d) => d.cors.some((c) => c.nome === nome && c.team === equipe && !c.g));
-  const busca = negociosDaCopia(nome, equipe, de, ate).then((pre) => {
-    if (pre) return pre;
-    aquecerNegocios(); // sem cópia utilizável: busca direto na Nekt desta vez e prepara a cópia para as próximas
-    return buscar(chave, nome, equipe, de, ate);
-  });
-  busca.catch(() => {});
-  if (!(await escopo)) return json({ erro: "corretor fora do seu escopo" }, 403);
   try {
-    return json(await busca);
+    const pre = await negociosDaCopia(nome, equipe, de, ate);
+    if (pre) return json(pre);
+    aquecerNegocios(); // sem cópia utilizável: busca direto na Nekt desta vez e prepara a cópia para as próximas
+    return json(await buscar(chave, nome, equipe, de, ate));
   } catch {
     return json({ erro: "indisponível" }, 502);
   }

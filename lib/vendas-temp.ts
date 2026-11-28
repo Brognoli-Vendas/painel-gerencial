@@ -2,6 +2,7 @@ import "server-only";
 import type { Dados } from "@/lib/dados";
 import type { Perfil } from "@/lib/permissions";
 import { comCardComprador } from "@/lib/card-comprador";
+import { rpcSegredo } from "@/lib/rpc-segredo";
 
 /**
  * Vendas confirmadas direto no Bitrix que a Nekt ainda não trouxe (tabela vendas_temporarias).
@@ -14,24 +15,8 @@ import { comCardComprador } from "@/lib/card-comprador";
 type Temp = { deal_id: string; linha: string[] };
 
 async function ler(): Promise<Temp[]> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const chave = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const segredo = process.env.SNAPSHOT_SEGREDO;
-  if (!url || !chave || !segredo) return [];
-  try {
-    const r = await fetch(`${url}/rest/v1/rpc/vendas_temp_ler`, {
-      method: "POST",
-      headers: { "content-type": "application/json", apikey: chave, authorization: `Bearer ${chave}` },
-      body: JSON.stringify({ p_segredo: segredo }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (!r.ok) return [];
-    const j = (await r.json()) as Temp[];
-    return Array.isArray(j) ? j.filter((t) => Array.isArray(t.linha) && t.linha.length >= 12) : [];
-  } catch {
-    return [];
-  }
+  const j = await rpcSegredo<Temp[]>("vendas_temp_ler", {}, 5_000);
+  return Array.isArray(j) ? j.filter((t) => Array.isArray(t.linha) && t.linha.length >= 12) : [];
 }
 
 /** Parte pura (testável): junta as vendas temporárias que a Nekt ainda não trouxe. */
