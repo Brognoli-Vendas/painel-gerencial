@@ -9,7 +9,7 @@ export async function carregarUsuariosAdmin(): Promise<UsuarioTela[]> {
     supabase.rpc("admin_listar_usuarios"),
     supabase.from("permissoes_usuario").select("usuario_id, chave, permitido"),
     // Último uso real: login ou tela aberta (quem mantém a sessão aberta não faz login de novo).
-    supabase.from("registros_acesso").select("usuario_id, criado_em").in("evento", ["login", "visualizacao_tela"]).order("id", { ascending: false }).limit(5000),
+    supabase.rpc("admin_ultimo_uso"),
   ]);
   const porUsuario = new Map<string, { chave: string; permitido: boolean }[]>();
   (aj ?? []).forEach((a: { usuario_id: string; chave: string; permitido: boolean }) => {
@@ -18,8 +18,8 @@ export async function carregarUsuariosAdmin(): Promise<UsuarioTela[]> {
     porUsuario.set(a.usuario_id, l);
   });
   const ultimoUso = new Map<string, string>();
-  (reg ?? []).forEach((r: { usuario_id: string | null; criado_em: string }) => {
-    if (r.usuario_id && !ultimoUso.has(r.usuario_id)) ultimoUso.set(r.usuario_id, r.criado_em);
+  (reg ?? []).forEach((r: { usuario_id: string | null; ultimo: string }) => {
+    if (r.usuario_id) ultimoUso.set(r.usuario_id, r.ultimo);
   });
   const maisRecente = (a: string | null, b: string | undefined) => (a && b ? (new Date(a) > new Date(b) ? a : b) : (a ?? b ?? null));
   return ((us ?? []) as Omit<UsuarioTela, "ajustes">[]).map((u) => ({

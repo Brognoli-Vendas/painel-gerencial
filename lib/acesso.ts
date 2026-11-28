@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { TELAS } from "@/lib/permissions";
+import { rpcSegredo } from "@/lib/rpc-segredo";
 
 /**
  * Registro de acessos de quem já está com a sessão aberta (não passa pela tela de login).
@@ -46,21 +47,7 @@ export async function marcarAbertura(usuarioId: string): Promise<void> {
  * O banco liga o e-mail ao usuário (se existir) e limita a 30 falhas por e-mail por hora. Nunca atrapalha o login.
  */
 export async function registrarFalhaLogin(email: string): Promise<void> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const chave = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const segredo = process.env.SNAPSHOT_SEGREDO;
-  if (!url || !chave || !segredo) return;
-  try {
-    await fetch(`${url}/rest/v1/rpc/registrar_falha_login`, {
-      method: "POST",
-      headers: { "content-type": "application/json", apikey: chave, authorization: `Bearer ${chave}` },
-      body: JSON.stringify({ p_segredo: segredo, p_email: email.slice(0, 254) }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
-    });
-  } catch {
-    // registro é secundário
-  }
+  await rpcSegredo("registrar_falha_login", { p_email: email.slice(0, 254) }, 8_000);
 }
 
 /** Nome da tela no log a partir do id usado pelo esboço; vazio se for desconhecida. */

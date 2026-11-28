@@ -20,7 +20,10 @@ export async function atualizarSessao(request: NextRequest) {
     },
   );
 
-  const { data } = await supabase.auth.getUser();
+  // Verificação local do token (sem ida ao servidor de autenticação). A checagem completa, que enxerga sessões
+  // revogadas, continua em exigirSessao() em cada página e rota de API.
+  const { data: claims } = await supabase.auth.getClaims();
+  const data = { user: claims?.claims?.sub ? { id: claims.claims.sub } : null };
   const rota = request.nextUrl.pathname;
   const publica = rota === "/login" || rota.startsWith("/auth/");
 

@@ -72,35 +72,54 @@ type RespostaRpc = {
   error?: { message?: string };
 };
 
+const VIDA_SESSAO_MS = 4 * 60_000;
+let sessaoMcp: { id: string | null; em: number } | null = null;
+let abrindo: Promise<string | null> | null = null;
+
+/** Abre a sessão MCP uma vez e a reaproveita por alguns minutos (antes: 2 idas extras à Nekt a cada consulta). */
+async function sessaoAtiva(): Promise<{ id: string | null; nova: boolean }> {
+  if (sessaoMcp && Date.now() - sessaoMcp.em < VIDA_SESSAO_MS) return { id: sessaoMcp.id, nova: false };
+  if (!abrindo) {
+    abrindo = (async () => {
+      const init = await chamar(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "painel-gerencial", version: "1.0" } },
+        },
+        null,
+        true,
+      );
+      await chamar({ jsonrpc: "2.0", method: "notifications/initialized" }, init.sessao, false);
+      sessaoMcp = { id: init.sessao, em: Date.now() };
+      return init.sessao;
+    })().finally(() => {
+      abrindo = null;
+    });
+  }
+  return { id: await abrindo, nova: true };
+}
+
 /** Executa uma consulta SQL de leitura na Nekt e devolve colunas e linhas (tudo texto). */
 export async function nektSql(sql: string): Promise<ResultadoSql> {
-  const init = await chamar(
-    {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: {
-        protocolVersion: "2025-03-26",
-        capabilities: {},
-        clientInfo: { name: "painel-gerencial", version: "1.0" },
-      },
-    },
-    null,
-    true,
-  );
-  const sessao = init.sessao;
-  await chamar({ jsonrpc: "2.0", method: "notifications/initialized" }, sessao, false);
-
-  const res = await chamar(
-    {
-      jsonrpc: "2.0",
-      id: 2,
-      method: "tools/call",
-      params: { name: "execute_sql", arguments: { sql_query: sql } },
-    },
-    sessao,
-    true,
-  );
+  const executar = (sessao: string | null) =>
+    chamar(
+      { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "execute_sql", arguments: { sql_query: sql } } },
+      sessao,
+      true,
+    );
+  const { id, nova } = await sessaoAtiva();
+  let res: Resposta;
+  try {
+    res = await executar(id);
+  } catch (e) {
+    // Sessão reaproveitada pode ter expirado no lado da Nekt: abre outra e tenta uma vez.
+    sessaoMcp = null;
+    if (nova) throw e;
+    const outra = await sessaoAtiva();
+    res = await executar(outra.id);
+  }
   const rpc = res.corpo as RespostaRpc | null;
   if (!rpc) throw new Error("Nekt devolveu resposta vazia.");
   if (rpc.error) throw new Error(`Nekt: ${rpc.error.message ?? "erro desconhecido"}`);
