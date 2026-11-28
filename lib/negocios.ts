@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { nektSql } from "@/lib/nekt";
+import { rpcSegredo } from "@/lib/rpc-segredo";
 
 /**
  * Negócios por corretor, pré-montados no banco do painel (mesma tabela de cópia usada pelos demais dados).
@@ -13,26 +14,7 @@ const MAX_VELHO_MS = 90 * 60_000; // cópia mais velha que isso não é usada
 const META = "neg-meta";
 const chaveDe = (nome: string, equipe: string) => `neg|${nome}|${equipe}`;
 
-async function rpc<T>(fn: string, corpo: Record<string, unknown>): Promise<T | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const chave = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const segredo = process.env.SNAPSHOT_SEGREDO;
-  if (!url || !chave || !segredo) return null;
-  try {
-    const r = await fetch(`${url}/rest/v1/rpc/${fn}`, {
-      method: "POST",
-      headers: { "content-type": "application/json", apikey: chave, authorization: `Bearer ${chave}` },
-      body: JSON.stringify({ p_segredo: segredo, ...corpo }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!r.ok) return null;
-    const t = await r.text();
-    return t ? (JSON.parse(t) as T) : (null as T | null);
-  } catch {
-    return null;
-  }
-}
+const rpc = rpcSegredo;
 
 type Linha = string[]; // [id, título, etapa, situação, funil, criado, modificado (dia), modificado (s), etapa id, movido (s), fechado (dia)]
 
@@ -49,10 +31,10 @@ async function montar(): Promise<number> {
   );
   if (r.truncado) throw new Error("resultado parcial");
   const itens = r.linhas.filter((l) => l[0] && l[1] && l[2]);
-  for (let i = 0; i < itens.length; i += 10) {
-    await Promise.all(
-      itens.slice(i, i + 10).map((l) => rpc("snapshot_gravar", { p_chave: chaveDe(l[0], l[1]), p_dados: JSON.parse(l[2]) })),
-    );
+  // Gravação em lote (uma chamada por 25 corretores em vez de uma por corretor).
+  for (let i = 0; i < itens.length; i += 25) {
+    const lote = itens.slice(i, i + 25).map((l) => ({ chave: chaveDe(l[0], l[1]), dados: JSON.parse(l[2]) }));
+    await rpc("snapshot_gravar_lote", { p_itens: lote }, 30_000);
   }
   await rpc("snapshot_gravar", { p_chave: META, p_dados: { n: itens.length } });
   return itens.length;
